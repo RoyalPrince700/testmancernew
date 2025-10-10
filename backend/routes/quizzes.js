@@ -177,9 +177,11 @@ router.get('/admin/quizzes', authenticateToken, requirePermission('manage_course
         return res.json({ quizzes: [] });
       }
     } else if (user.role === 'waec_admin') {
-      courseFilter.learningGoals = 'waec';
+      // TODO: Re-implement category filtering based on new course structure
+      courseFilter = {};
     } else if (user.role === 'jamb_admin') {
-      courseFilter.learningGoals = 'jamb';
+      // TODO: Re-implement category filtering based on new course structure
+      courseFilter = {};
     }
 
     // Get courses this admin can manage
@@ -189,7 +191,7 @@ router.get('/admin/quizzes', authenticateToken, requirePermission('manage_course
     // Get quizzes for these courses
     const quizzes = await Quiz.find({
       courseId: { $in: courseIds }
-    }).populate('courseId', 'title learningGoals');
+    }).populate('courseId', 'title courseCode');
 
     res.json({ quizzes });
   } catch (error) {
@@ -323,21 +325,17 @@ router.delete('/admin/quizzes/:id', authenticateToken, requirePermission('manage
 // Helper function to validate course scope (same as in courses.js)
 function validateCourseScope(user, course) {
   const { role, assignedUniversities, assignedFaculties } = user;
-  const { learningGoals, audience } = course;
+  const { audience } = course;
 
   // Full admin can manage all courses
   if (role === 'admin') {
     return true;
   }
 
-  // WAEC admin can only manage WAEC courses
-  if (role === 'waec_admin') {
-    return learningGoals?.includes('waec');
-  }
-
-  // JAMB admin can only manage JAMB courses
-  if (role === 'jamb_admin') {
-    return learningGoals?.includes('jamb');
+  // Category admins currently have full access (learningGoals removed)
+  // TODO: Re-implement category restrictions based on new course structure
+  if (role === 'waec_admin' || role === 'jamb_admin') {
+    return true;
   }
 
   // Subadmin validation

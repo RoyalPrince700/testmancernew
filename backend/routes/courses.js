@@ -2,6 +2,7 @@ import express from 'express';
 import Course from '../models/Course.js';
 import User from '../models/User.js';
 import { authenticateToken, requirePermission } from '../middleware/auth.js';
+import Joi from 'joi';
 
 const router = express.Router();
 
@@ -15,16 +16,7 @@ router.get('/', authenticateToken, async (req, res) => {
   }
 });
 
-// Get courses by learning goal
-router.get('/goal/:goal', authenticateToken, async (req, res) => {
-  try {
-    const { goal } = req.params;
-    const courses = await Course.find({ learningGoals: goal }).populate('modules');
-    res.json({ courses });
-  } catch (error) {
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
+// Note: /goal/:goal endpoint removed - learning goals no longer part of course structure
 
 // Get personalized courses for user based on their learning categories
 router.get('/personalized', authenticateToken, async (req, res) => {
@@ -37,22 +29,19 @@ router.get('/personalized', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Filter by specific category if provided, otherwise use all user's learning categories
-    const filterCategories = category ? [category] : user.learningCategories;
-
-    // Build filter based on user's learning categories and profile
+    // Build filter based on user's profile
     let filter = {
-      isActive: true,
-      learningGoals: { $in: filterCategories }
+      isActive: true
     };
 
-    // For undergraduate users, also filter by audience (university/faculty/level)
+    // For undergraduate users, filter by audience (university/faculty/level)
     if (user.isUndergraduate && (user.university || user.faculty || user.level)) {
       // Build audience matching conditions
       const audienceConditions = [];
 
       // Always include courses with no audience restriction (general courses)
       audienceConditions.push({ 'audience': { $exists: false } });
+      audienceConditions.push({ 'audience': null });
       audienceConditions.push({ 'audience': {} });
 
       // Add specific university/faculty/level matching
@@ -70,12 +59,7 @@ router.get('/personalized', authenticateToken, async (req, res) => {
         audienceConditions.push(specificMatch);
       }
 
-      // Combine with existing learningGoals filter
-      filter.$and = [
-        { learningGoals: { $in: filterCategories } },
-        { $or: audienceConditions }
-      ];
-      delete filter.learningGoals; // Remove from root level since it's now in $and
+      filter.$or = audienceConditions;
     }
 
     // Get courses that match the filters
@@ -213,11 +197,13 @@ router.get('/admin/courses', authenticateToken, requirePermission('manage_course
         return res.json({ courses: [] });
       }
     } else if (user.role === 'waec_admin') {
-      // WAEC admins only see WAEC courses
-      filter.learningGoals = 'waec';
+      // TODO: Re-implement category filtering based on new course structure
+      // For now, category admins see all courses
+      filter = {};
     } else if (user.role === 'jamb_admin') {
-      // JAMB admins only see JAMB courses
-      filter.learningGoals = 'jamb';
+      // TODO: Re-implement category filtering based on new course structure
+      // For now, category admins see all courses
+      filter = {};
     }
     // Full admin sees all courses (no additional filter)
 
@@ -233,21 +219,29 @@ router.get('/admin/courses', authenticateToken, requirePermission('manage_course
 router.post('/admin/courses', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
   try {
     const user = req.user;
-    const { title, description, learningGoals, category, audience } = req.body;
+    const courseData = req.body;
+
+    // Validate input based on user role
+    const schema = user.role === 'subadmin' ? subadminCourseSchema : courseSchema;
+    const { error } = schema.validate(courseData);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
 
     // Validate that the course fits within the admin's scope
-    if (!validateCourseScope(user, { learningGoals, audience })) {
+    if (!validateCourseScope(user, courseData)) {
       return res.status(403).json({
         message: 'Cannot create course outside your assigned scope'
       });
     }
 
     const course = new Course({
-      title,
-      description,
-      learningGoals,
-      category,
-      audience: audience || {}
+      title: courseData.title,
+      courseCode: courseData.courseCode,
+      description: courseData.description,
+      units: courseData.units,
+      tags: courseData.tags || [],
+      audience: courseData.audience || {}
     });
 
     await course.save();
@@ -276,9 +270,14 @@ router.put('/admin/courses/:id', authenticateToken, requirePermission('manage_co
       return res.status(404).json({ message: 'Course not found' });
     }
 
+    // Validate input
+    const { error } = courseSchema.validate(updates, { allowUnknown: true });
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
     // Validate that the updated course still fits within scope
     if (!validateCourseScope(user, {
-      learningGoals: updates.learningGoals || existingCourse.learningGoals,
       audience: updates.audience || existingCourse.audience
     })) {
       return res.status(403).json({
@@ -335,24 +334,427 @@ router.delete('/admin/courses/:id', authenticateToken, requirePermission('manage
   }
 });
 
+// Validation schemas
+const courseSchema = Joi.object({
+  title: Joi.string().min(3).max(200).required(),
+  courseCode: Joi.string().min(1).max(20).required(),
+  description: Joi.string().min(10).max(2000).required(),
+  units: Joi.number().integer().min(1).max(5).required(),
+  tags: Joi.array().items(Joi.string().trim().lowercase()).optional(),
+  audience: Joi.object({
+    universities: Joi.array().items(Joi.string().trim()),
+    faculties: Joi.array().items(Joi.string().trim()),
+    levels: Joi.array().items(Joi.string().trim())
+  }).optional()
+});
+
+// Schema for subadmin course creation (tags not required)
+const subadminCourseSchema = Joi.object({
+  title: Joi.string().min(3).max(200).required(),
+  courseCode: Joi.string().min(1).max(20).required(),
+  description: Joi.string().min(10).max(2000).required(),
+  units: Joi.number().integer().min(1).max(5).required(),
+  audience: Joi.object({
+    universities: Joi.array().items(Joi.string().trim()),
+    faculties: Joi.array().items(Joi.string().trim()),
+    levels: Joi.array().items(Joi.string().trim())
+  }).optional()
+});
+
+const moduleSchema = Joi.object({
+  title: Joi.string().min(3).max(200).required(),
+  description: Joi.string().min(10).max(1000).required(),
+  order: Joi.number().integer().min(1).required(),
+  estimatedTime: Joi.number().integer().min(1).required()
+});
+
+const pageSchema = Joi.object({
+  title: Joi.string().min(3).max(200).required(),
+  order: Joi.number().integer().min(1).required(),
+  html: Joi.string().min(1).required(),
+  audioUrl: Joi.string().uri().allow('').optional(),
+  videoUrl: Joi.string().uri().allow('').optional(),
+  attachments: Joi.array().items(Joi.object({
+    title: Joi.string().min(1).max(200).required(),
+    url: Joi.string().uri().required(),
+    type: Joi.string().valid('document', 'image', 'link').required()
+  })).optional()
+});
+
+// Module CRUD routes
+// Get all modules for a course
+router.get('/admin/courses/:courseId/modules', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const user = req.user;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot access modules for course outside your assigned scope'
+      });
+    }
+
+    res.json({ modules: course.modules });
+  } catch (error) {
+    console.error('Error fetching modules:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Create module for a course
+router.post('/admin/courses/:courseId/modules', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const user = req.user;
+    const moduleData = req.body;
+
+    // Validate input
+    const { error } = moduleSchema.validate(moduleData);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot create modules for course outside your assigned scope'
+      });
+    }
+
+    // Check if order already exists
+    const existingOrder = course.modules.some(mod => mod.order === moduleData.order);
+    if (existingOrder) {
+      return res.status(400).json({ message: 'Module order must be unique within the course' });
+    }
+
+    const newModule = {
+      title: moduleData.title,
+      description: moduleData.description,
+      order: moduleData.order,
+      estimatedTime: moduleData.estimatedTime,
+      pages: []
+    };
+
+    course.modules.push(newModule);
+    await course.save();
+
+    const addedModule = course.modules[course.modules.length - 1];
+
+    res.status(201).json({
+      module: addedModule,
+      message: 'Module created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating module:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update module
+router.put('/admin/courses/:courseId/modules/:moduleId', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, moduleId } = req.params;
+    const user = req.user;
+    const updates = req.body;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot update modules for course outside your assigned scope'
+      });
+    }
+
+    const moduleIndex = course.modules.findIndex(mod => mod._id.toString() === moduleId);
+    if (moduleIndex === -1) {
+      return res.status(404).json({ message: 'Module not found' });
+    }
+
+    // Validate updates
+    const { error } = moduleSchema.validate(updates, { allowUnknown: true });
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    // Check if new order conflicts with existing modules
+    if (updates.order && updates.order !== course.modules[moduleIndex].order) {
+      const orderExists = course.modules.some((mod, index) =>
+        index !== moduleIndex && mod.order === updates.order
+      );
+      if (orderExists) {
+        return res.status(400).json({ message: 'Module order must be unique within the course' });
+      }
+    }
+
+    // Update module
+    Object.assign(course.modules[moduleIndex], updates);
+    await course.save();
+
+    res.json({
+      module: course.modules[moduleIndex],
+      message: 'Module updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating module:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete module
+router.delete('/admin/courses/:courseId/modules/:moduleId', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, moduleId } = req.params;
+    const user = req.user;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot delete modules for course outside your assigned scope'
+      });
+    }
+
+    const moduleIndex = course.modules.findIndex(mod => mod._id.toString() === moduleId);
+    if (moduleIndex === -1) {
+      return res.status(404).json({ message: 'Module not found' });
+    }
+
+    course.modules.splice(moduleIndex, 1);
+    await course.save();
+
+    res.json({
+      message: 'Module deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting module:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Page CRUD routes
+// Get all pages for a module
+router.get('/admin/courses/:courseId/modules/:moduleId/pages', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, moduleId } = req.params;
+    const user = req.user;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot access pages for course outside your assigned scope'
+      });
+    }
+
+    const module = course.modules.id(moduleId);
+    if (!module) {
+      return res.status(404).json({ message: 'Module not found' });
+    }
+
+    res.json({ pages: module.pages });
+  } catch (error) {
+    console.error('Error fetching pages:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Create page for a module
+router.post('/admin/courses/:courseId/modules/:moduleId/pages', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, moduleId } = req.params;
+    const user = req.user;
+    const pageData = req.body;
+
+    // Validate input
+    const { error } = pageSchema.validate(pageData);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot create pages for course outside your assigned scope'
+      });
+    }
+
+    const module = course.modules.id(moduleId);
+    if (!module) {
+      return res.status(404).json({ message: 'Module not found' });
+    }
+
+    // Check if order already exists in this module
+    const existingOrder = module.pages.some(page => page.order === pageData.order);
+    if (existingOrder) {
+      return res.status(400).json({ message: 'Page order must be unique within the module' });
+    }
+
+    const newPage = {
+      title: pageData.title,
+      order: pageData.order,
+      html: pageData.html,
+      audioUrl: pageData.audioUrl || '',
+      videoUrl: pageData.videoUrl || '',
+      attachments: pageData.attachments || [],
+      isActive: true
+    };
+
+    module.pages.push(newPage);
+    await course.save();
+
+    const addedPage = module.pages[module.pages.length - 1];
+
+    res.status(201).json({
+      page: addedPage,
+      message: 'Page created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating page:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update page
+router.put('/admin/courses/:courseId/modules/:moduleId/pages/:pageId', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, moduleId, pageId } = req.params;
+    const user = req.user;
+    const updates = req.body;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot update pages for course outside your assigned scope'
+      });
+    }
+
+    const module = course.modules.id(moduleId);
+    if (!module) {
+      return res.status(404).json({ message: 'Module not found' });
+    }
+
+    const pageIndex = module.pages.findIndex(page => page._id.toString() === pageId);
+    if (pageIndex === -1) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+
+    // Validate updates
+    const { error } = pageSchema.validate(updates, { allowUnknown: true });
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    // Check if new order conflicts with existing pages in this module
+    if (updates.order && updates.order !== module.pages[pageIndex].order) {
+      const orderExists = module.pages.some((page, index) =>
+        index !== pageIndex && page.order === updates.order
+      );
+      if (orderExists) {
+        return res.status(400).json({ message: 'Page order must be unique within the module' });
+      }
+    }
+
+    // Update page
+    Object.assign(module.pages[pageIndex], updates);
+    await course.save();
+
+    res.json({
+      page: module.pages[pageIndex],
+      message: 'Page updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating page:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete page
+router.delete('/admin/courses/:courseId/modules/:moduleId/pages/:pageId', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, moduleId, pageId } = req.params;
+    const user = req.user;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot delete pages for course outside your assigned scope'
+      });
+    }
+
+    const module = course.modules.id(moduleId);
+    if (!module) {
+      return res.status(404).json({ message: 'Module not found' });
+    }
+
+    const pageIndex = module.pages.findIndex(page => page._id.toString() === pageId);
+    if (pageIndex === -1) {
+      return res.status(404).json({ message: 'Page not found' });
+    }
+
+    module.pages.splice(pageIndex, 1);
+    await course.save();
+
+    res.json({
+      message: 'Page deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting page:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Helper function to validate if a course is within an admin's scope
 function validateCourseScope(user, course) {
   const { role, assignedUniversities, assignedFaculties, assignedLevels } = user;
-  const { learningGoals, audience } = course;
+  const { audience } = course;
 
   // Full admin can manage all courses
   if (role === 'admin') {
     return true;
   }
 
-  // WAEC admin can only manage WAEC courses
-  if (role === 'waec_admin') {
-    return learningGoals?.includes('waec');
-  }
-
-  // JAMB admin can only manage JAMB courses
-  if (role === 'jamb_admin') {
-    return learningGoals?.includes('jamb');
+  // Category admins currently have full access (learningGoals removed)
+  // TODO: Re-implement category restrictions based on new course structure
+  if (role === 'waec_admin' || role === 'jamb_admin') {
+    return true;
   }
 
   // Subadmin validation
@@ -366,6 +768,12 @@ function validateCourseScope(user, course) {
     const courseUniversities = audience?.universities || [];
     const courseFaculties = audience?.faculties || [];
     const courseLevels = audience?.levels || [];
+
+    // If course has no audience restrictions (empty arrays), subadmins can create it
+    // This allows subadmins to create general courses accessible to all students
+    if (courseUniversities.length === 0 && courseFaculties.length === 0 && courseLevels.length === 0) {
+      return true;
+    }
 
     const universityMatch = assignedUniversities?.some(univ =>
       courseUniversities.includes(univ)

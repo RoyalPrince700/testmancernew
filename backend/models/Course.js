@@ -91,21 +91,22 @@ const courseSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  courseCode: {
+    type: String,
+    required: true,
+    trim: true,
+    maxlength: 20
+  },
   description: {
     type: String,
     required: true,
     trim: true
   },
-  learningGoals: [{
-    type: String,
-    enum: ['waec', 'postutme', 'jamb', 'toefl', 'ielts', 'undergraduate'],
+  units: {
+    type: Number,
     required: true,
-    lowercase: true
-  }],
-  category: {
-    type: String,
-    required: true,
-    enum: ['secondary', 'tertiary', 'language', 'professional']
+    min: 1,
+    max: 5
   },
   audience: {
     universities: [{
@@ -168,8 +169,8 @@ const courseSchema = new mongoose.Schema({
 });
 
 // Indexes for efficient queries
-courseSchema.index({ learningGoals: 1 });
-courseSchema.index({ category: 1 });
+courseSchema.index({ courseCode: 1 }, { unique: true });
+courseSchema.index({ units: 1 });
 courseSchema.index({ difficulty: 1 });
 courseSchema.index({ isActive: 1 });
 courseSchema.index({ enrollmentCount: -1 });

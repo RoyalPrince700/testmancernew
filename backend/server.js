@@ -16,6 +16,7 @@ import quizRoutes from './routes/quizzes.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import postUtmeRoutes from './routes/postutme.js';
 import uploadRoutes from './routes/uploads.js';
+import adminRoutes from './routes/admin.js';
 
 // Load environment variables
 dotenv.config();
@@ -120,6 +121,7 @@ app.use('/api/courses', courseRoutes);
 app.use('/api/quizzes', quizRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/post-utme', postUtmeRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api/admin/uploads', uploadRoutes);
 
 // Health check route

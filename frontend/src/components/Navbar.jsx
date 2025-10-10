@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { FaBars, FaTimes, FaUser, FaTrophy, FaBook, FaHome, FaSignOutAlt } from 'react-icons/fa';
 
 const Navbar = () => {
-  const { user, logout, isAuthenticated } = useAuth();
+  const { user, logout, isAuthenticated, isAdmin, isSubAdmin } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -17,12 +17,33 @@ const Navbar = () => {
     setIsOpen(false);
   };
 
-  const navItems = [
-    { path: '/', label: 'Home', icon: FaHome },
-    { path: '/dashboard', label: 'Dashboard', icon: FaHome, protected: true },
-    { path: '/courses', label: 'Courses', icon: FaBook, protected: true },
-    { path: '/leaderboard', label: 'Leaderboard', icon: FaTrophy, protected: true },
-  ];
+  // Dynamic nav items based on user role
+  const getNavItems = () => {
+    const baseItems = [
+      { path: '/', label: 'Home', icon: FaHome },
+      { path: '/dashboard', label: 'Dashboard', icon: FaHome, protected: true },
+      { path: '/courses', label: 'Courses', icon: FaBook, protected: true },
+      { path: '/leaderboard', label: 'Leaderboard', icon: FaTrophy, protected: true },
+    ];
+
+    // Add admin/subadmin items based on role
+    if (isAdmin || isSubAdmin) {
+      if (isAdmin && !isSubAdmin) {
+        // Full admin only
+        baseItems.push({ path: '/admin', label: 'Admin', icon: FaUser, adminOnly: true });
+      } else if (isSubAdmin && !isAdmin) {
+        // Subadmin only
+        baseItems.push({ path: '/subadmin', label: 'Sub Admin', icon: FaUser, adminOnly: true });
+      } else if (isAdmin && isSubAdmin) {
+        // Both roles (shouldn't happen, but handle gracefully)
+        baseItems.push({ path: '/admin', label: 'Admin', icon: FaUser, adminOnly: true });
+      }
+    }
+
+    return baseItems;
+  };
+
+  const navItems = getNavItems();
 
   const isActive = (path) => location.pathname === path;
 
@@ -44,6 +65,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center space-x-8">
             {navItems.map((item) => {
               if (item.protected && !isAuthenticated) return null;
+              if (item.adminOnly && !isAdmin && !isSubAdmin) return null;
 
               const Icon = item.icon;
               return (
@@ -136,6 +158,7 @@ const Navbar = () => {
             <div className="px-2 pt-2 pb-3 space-y-1 bg-white border-t border-gray-200">
               {navItems.map((item) => {
                 if (item.protected && !isAuthenticated) return null;
+                if (item.adminOnly && !isAdmin && !isSubAdmin) return null;
 
                 const Icon = item.icon;
                 return (

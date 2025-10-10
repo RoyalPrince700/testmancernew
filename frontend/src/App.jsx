@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import { CategoryProvider } from './contexts/CategoryContext';
 import { Toaster } from 'react-hot-toast';
@@ -7,6 +7,10 @@ import { Toaster } from 'react-hot-toast';
 // Components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import AdminDashboard from './components/AdminDashboard';
+import SubAdminDashboard from './components/SubAdminDashboard';
+import AdminRoute from './components/AdminRoute';
+import SubAdminRoute from './components/SubAdminRoute';
 
 // Pages
 import Home from './pages/Home';
@@ -31,9 +35,21 @@ import ProtectedRoute from './components/ProtectedRoute';
 // Styles
 import './index.css';
 
+// ScrollToTop component
+function ScrollToTop() {
+  const { pathname } = useLocation();
+
+  React.useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
+
+  return null;
+}
+
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <AuthProvider>
         <CategoryProvider>
           <div className="min-h-screen bg-gray-50">
@@ -92,6 +108,19 @@ function App() {
                 <ProtectedRoute>
                   <Profile />
                 </ProtectedRoute>
+              } />
+
+              {/* Admin Routes */}
+              <Route path="/admin" element={
+                <AdminRoute>
+                  <AdminDashboard />
+                </AdminRoute>
+              } />
+
+              <Route path="/subadmin" element={
+                <SubAdminRoute>
+                  <SubAdminDashboard />
+                </SubAdminRoute>
               } />
 
               {/* Post-UTME Routes */}

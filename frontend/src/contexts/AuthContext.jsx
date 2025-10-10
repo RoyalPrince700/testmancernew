@@ -39,12 +39,10 @@ export const AuthProvider = ({ children }) => {
 
       setLoading(true);
       try {
-        console.log('Fetching user data with token:', token.substring(0, 20) + '...');
         const response = await axios.get('/api/auth/me');
         if (cancelled) return;
 
         if (response.data.user) {
-          console.log('User data fetched successfully:', response.data.user.name);
           setUser(response.data.user);
         } else {
           console.error('No user data in response');
@@ -162,6 +160,9 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Permission checking methods
+  const isAdmin = user?.role === 'admin';
+  const isSubAdmin = user?.role === 'subadmin' || user?.role === 'waec_admin' || user?.role === 'jamb_admin';
+
   const canManageCourses = () => {
     return isAdmin || isSubAdmin;
   };
@@ -213,8 +214,8 @@ export const AuthProvider = ({ children }) => {
     awardGems,
     isAuthenticated: !!user,
     isOnboarded: user?.onboardingCompleted || false,
-    isAdmin: user?.role === 'admin',
-    isSubAdmin: user?.role === 'subadmin' || user?.role === 'waec_admin' || user?.role === 'jamb_admin',
+    isAdmin,
+    isSubAdmin,
     role: user?.role || 'user',
     assignedUniversities: user?.assignedUniversities || [],
     assignedFaculties: user?.assignedFaculties || [],

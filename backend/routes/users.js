@@ -1,5 +1,6 @@
 import express from 'express';
 import User from '../models/User.js';
+import Course from '../models/Course.js';
 import { authenticateToken, protect, requirePermission } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -242,10 +243,10 @@ router.get('/admin/all', protect, requirePermission('manage_users'), async (req,
 });
 
 // Update user role (admin only)
-router.put('/admin/:userId/role', protect, requirePermission('manage_users'), async (req, res) => {
+router.put('/admin/:userId([0-9a-fA-F]{24})/role', protect, requirePermission('manage_users'), async (req, res) => {
   try {
     const { userId } = req.params;
-    const { role, assignedUniversities, assignedFaculties, assignedLevels } = req.body;
+    const { role } = req.body;
 
     // Validate role
     const validRoles = ['user', 'admin', 'subadmin', 'waec_admin', 'jamb_admin'];
@@ -256,27 +257,51 @@ router.put('/admin/:userId/role', protect, requirePermission('manage_users'), as
       });
     }
 
-    // Validate assignments based on role
+    // Normalize and validate assignments based on role
+    const toArray = (value) => {
+      if (Array.isArray(value)) return value;
+      if (typeof value === 'string') return [value];
+      return [];
+    };
+
+    const sanitizeList = (list) => {
+      const unique = new Set(
+        toArray(list)
+          .map((v) => (v == null ? '' : String(v)))
+          .map((v) => v.trim())
+          .filter((v) => v.length > 0)
+      );
+      return Array.from(unique);
+    };
+
+    const inputUniversities = sanitizeList(req.body.assignedUniversities);
+    const inputFaculties = sanitizeList(req.body.assignedFaculties);
+    const inputLevels = sanitizeList(req.body.assignedLevels);
+
+    const updateData = { role };
+
     if (role === 'subadmin') {
-      if (!assignedUniversities?.length && !assignedFaculties?.length && !assignedLevels?.length) {
+      const hasAnyAssignment =
+        inputUniversities.length > 0 || inputFaculties.length > 0 || inputLevels.length > 0;
+      if (!hasAnyAssignment) {
         return res.status(400).json({
           message: 'Subadmin must have at least one assigned university, faculty, or level'
         });
       }
+      updateData.assignedUniversities = inputUniversities;
+      updateData.assignedFaculties = inputFaculties;
+      updateData.assignedLevels = inputLevels;
     } else if (['waec_admin', 'jamb_admin'].includes(role)) {
-      // Category admins don't need university/faculty/level assignments
-      // But we should clear any existing ones
+      // Category admins don't require scoped assignments; clear them
+      updateData.assignedUniversities = [];
+      updateData.assignedFaculties = [];
+      updateData.assignedLevels = [];
     } else {
       // For user/admin, clear assignments
-      assignedUniversities = [];
-      assignedFaculties = [];
-      assignedLevels = [];
+      updateData.assignedUniversities = [];
+      updateData.assignedFaculties = [];
+      updateData.assignedLevels = [];
     }
-
-    const updateData = { role };
-    if (assignedUniversities !== undefined) updateData.assignedUniversities = assignedUniversities;
-    if (assignedFaculties !== undefined) updateData.assignedFaculties = assignedFaculties;
-    if (assignedLevels !== undefined) updateData.assignedLevels = assignedLevels;
 
     const user = await User.findByIdAndUpdate(
       userId,
@@ -309,7 +334,7 @@ router.put('/admin/:userId/role', protect, requirePermission('manage_users'), as
 });
 
 // Get user details for admin (admin only)
-router.get('/admin/:userId', protect, requirePermission('manage_users'), async (req, res) => {
+router.get('/admin/:userId([0-9a-fA-F]{24})', protect, requirePermission('manage_users'), async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -324,6 +349,66 @@ router.get('/admin/:userId', protect, requirePermission('manage_users'), async (
     res.json({ user });
   } catch (error) {
     console.error('Error fetching user details:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get admin dashboard statistics
+router.get('/admin/stats', protect, requirePermission('manage_users'), async (req, res) => {
+  try {
+    // Get user statistics
+    const totalUsers = await User.countDocuments();
+    const adminUsers = await User.countDocuments({ role: 'admin' });
+    const subAdminUsers = await User.countDocuments({ role: 'subadmin' });
+    const categoryAdminUsers = await User.countDocuments({
+      role: { $in: ['waec_admin', 'jamb_admin'] }
+    });
+
+    // Get course statistics
+    const totalCourses = await Course.countDocuments();
+    const coursesByCategory = await Course.aggregate([
+      {
+        $group: {
+          _id: '$category',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    // Get media files count (placeholder - would need to integrate with Cloudinary or file storage)
+    const mediaFiles = 0; // TODO: Implement actual media count
+
+    // Get total gems earned
+    const totalGemsResult = await User.aggregate([
+      {
+        $group: {
+          _id: null,
+          total: { $sum: '$gems' }
+        }
+      }
+    ]);
+    const totalGems = totalGemsResult.length > 0 ? totalGemsResult[0].total : 0;
+
+    res.json({
+      users: {
+        total: totalUsers,
+        admin: adminUsers,
+        subadmin: subAdminUsers,
+        categoryAdmins: categoryAdminUsers
+      },
+      courses: {
+        total: totalCourses,
+        byCategory: coursesByCategory
+      },
+      media: {
+        total: mediaFiles
+      },
+      gems: {
+        total: totalGems
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

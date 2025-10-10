@@ -129,19 +129,19 @@ Add role-based media upload endpoints using multer + Cloudinary: `/api/admin/upl
 
 ---
 
-### M4. Admin course/page authoring APIs
+### M4. Admin/Subadmin course/page authoring APIs
 
 **Backend:**
-- [ ] Role-based CRUD for course, module, page (admin/subadmin scoped)
-- [ ] On page: set text (HTML/Markdown), attach audio/video by URL, set `order`
-- [ ] Course audience targeting selectors (universities/faculties/levels)
-- [ ] Subadmin course creation limited to assigned universities/faculties/levels
+- [x] Role-based CRUD for course, module, page (admin/subadmin scoped)
+- [x] On page: set text (HTML/Markdown), attach audio/video by URL, set `order`
+- [x] Course audience targeting selectors (universities/faculties/levels)
+- [x] Subadmin course creation limited to assigned universities/faculties/levels
 
 **Frontend:**
-- [ ] Create basic admin API testing components (temporary for validation)
-- [ ] Add admin API service functions to handle CRUD operations
-- [ ] Create forms for course/module/page creation with audience targeting
-- [ ] Add validation for role-based permissions in frontend
+- [x] Create basic admin API testing components (temporary for validation)
+- [x] Add admin API service functions to handle CRUD operations
+- [x] Create forms for course/module/page creation with audience targeting
+- [x] Add validation for role-based permissions in frontend
 
 Acceptance
 - **Routes**: `/api/admin/courses` CRUD; nested modules/pages CRUD (scoped by role)
@@ -151,7 +151,7 @@ Acceptance
 
 Prompt
 ```text
-Create role-based authoring routes: CRUD for courses (`title, description, learningGoals, category, audience`), modules (`title, description, order, estimatedTime`), and pages (`title, order, html, audioUrl, videoUrl`). Implement nested REST routes and input validation. Use requirePermission('manage_courses') for scoped access - full admins see all, subadmins see only their assigned universities/faculties/levels. Create React admin API service functions and basic forms for testing CRUD operations with audience targeting and role validation.
+Create role-based authoring routes: CRUD for courses (`title, description, learningGoals, category, audience`), modules (`title, description, order, estimatedTime`), pages (`title, order, html, audioUrl, videoUrl`), and quizzes (`courseId, title, questions, trigger, moduleId, pageOrder`). Implement nested REST routes and input validation. Use requirePermission('manage_courses') for scoped access - full admins see all, subadmins see only their assigned universities/faculties/levels. Create React admin API service functions and basic forms for testing CRUD operations with audience targeting and role validation.
 ```
 
 ---
