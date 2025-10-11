@@ -7,7 +7,7 @@ import PageViewer from '../components/PageViewer';
 const CourseDetail = () => {
   const { courseId } = useParams();
   const [course, setCourse] = useState(null);
-  const [currentModule, setCurrentModule] = useState(null);
+  const [currentUnit, setCurrentUnit] = useState(null);
   const [currentPage, setCurrentPage] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -26,21 +26,27 @@ const CourseDetail = () => {
 
       setCourse(courseData);
 
-      // If course has modules with pages, set up the first module and page
+      // If course has units with pages, set up the first unit and page
       if (courseData.modules && courseData.modules.length > 0) {
-        const firstModule = courseData.modules[0];
-        setCurrentModule(firstModule);
+        const firstUnit = courseData.modules[0];
+        setCurrentUnit(firstUnit);
 
-        if (firstModule.pages && firstModule.pages.length > 0) {
+        if (firstUnit.pages && firstUnit.pages.length > 0) {
           // Sort pages by order and get the first one
-          const sortedPages = firstModule.pages.sort((a, b) => a.order - b.order);
+          const sortedPages = firstUnit.pages.sort((a, b) => a.order - b.order);
           setCurrentPage(sortedPages[0]);
           setPageIndex(0);
         }
       }
     } catch (error) {
       console.error('Failed to load course details:', error);
-      toast.error('Failed to load course details');
+
+      // Check if it's a 404 error (course not found)
+      if (error.response && error.response.status === 404) {
+        toast.error('Course not found. It may have been deleted or you may not have access to it.');
+      } else {
+        toast.error('Failed to load course details. Please try again.');
+      }
     } finally {
       setLoading(false);
     }
@@ -48,74 +54,86 @@ const CourseDetail = () => {
 
   // Navigation functions
   const handlePreviousPage = () => {
-    if (!currentModule || !currentModule.pages) return;
+    if (!currentUnit || !currentUnit.pages) return;
 
-    const sortedPages = currentModule.pages.sort((a, b) => a.order - b.order);
+    const sortedPages = currentUnit.pages.sort((a, b) => a.order - b.order);
     const currentIndex = sortedPages.findIndex(page => page._id === currentPage._id);
 
     if (currentIndex > 0) {
       setCurrentPage(sortedPages[currentIndex - 1]);
       setPageIndex(currentIndex - 1);
     } else {
-      // Go to previous module if available
-      const currentModuleIndex = course.modules.findIndex(module => module._id === currentModule._id);
-      if (currentModuleIndex > 0) {
-        const prevModule = course.modules[currentModuleIndex - 1];
-        setCurrentModule(prevModule);
+      // Go to previous unit if available
+      const currentUnitIndex = course.modules.findIndex(unit => unit._id === currentUnit._id);
+      if (currentUnitIndex > 0) {
+        const prevUnit = course.modules[currentUnitIndex - 1];
+        setCurrentUnit(prevUnit);
 
-        if (prevModule.pages && prevModule.pages.length > 0) {
-          const sortedPrevPages = prevModule.pages.sort((a, b) => a.order - b.order);
+        if (prevUnit.pages && prevUnit.pages.length > 0) {
+          const sortedPrevPages = prevUnit.pages.sort((a, b) => a.order - b.order);
           setCurrentPage(sortedPrevPages[sortedPrevPages.length - 1]);
           setPageIndex(sortedPrevPages.length - 1);
         }
       }
     }
+
+    // Scroll to top when navigating to previous page
+    window.scrollTo(0, 0);
   };
 
   const handleNextPage = () => {
-    if (!currentModule || !currentModule.pages) return;
+    if (!currentUnit || !currentUnit.pages) return;
 
-    const sortedPages = currentModule.pages.sort((a, b) => a.order - b.order);
+    const sortedPages = currentUnit.pages.sort((a, b) => a.order - b.order);
     const currentIndex = sortedPages.findIndex(page => page._id === currentPage._id);
 
     if (currentIndex < sortedPages.length - 1) {
       setCurrentPage(sortedPages[currentIndex + 1]);
       setPageIndex(currentIndex + 1);
     } else {
-      // Go to next module if available
-      const currentModuleIndex = course.modules.findIndex(module => module._id === currentModule._id);
-      if (currentModuleIndex < course.modules.length - 1) {
-        const nextModule = course.modules[currentModuleIndex + 1];
-        setCurrentModule(nextModule);
+      // Check if this is the last page of the unit - mark unit as complete
+      const isLastPageOfUnit = currentIndex === sortedPages.length - 1;
+      if (isLastPageOfUnit) {
+        markUnitComplete(currentUnit._id);
+      }
 
-        if (nextModule.pages && nextModule.pages.length > 0) {
-          const sortedNextPages = nextModule.pages.sort((a, b) => a.order - b.order);
+      // Go to next unit if available
+      const currentUnitIndex = course.modules.findIndex(unit => unit._id === currentUnit._id);
+      if (currentUnitIndex < course.modules.length - 1) {
+        const nextUnit = course.modules[currentUnitIndex + 1];
+        setCurrentUnit(nextUnit);
+
+        if (nextUnit.pages && nextUnit.pages.length > 0) {
+          const sortedNextPages = nextUnit.pages.sort((a, b) => a.order - b.order);
           setCurrentPage(sortedNextPages[0]);
           setPageIndex(0);
         }
       }
     }
+
+    // Scroll to top when navigating to next page
+    window.scrollTo(0, 0);
   };
 
   // Check if there are previous/next pages
   const hasPreviousPage = () => {
-    if (!currentModule || !currentModule.pages || !course) return false;
+    if (!currentUnit || !currentUnit.pages || !course) return false;
 
-    const currentModuleIndex = course.modules.findIndex(module => module._id === currentModule._id);
-    const sortedPages = currentModule.pages.sort((a, b) => a.order - b.order);
+    const currentUnitIndex = course.modules.findIndex(unit => unit._id === currentUnit._id);
+    const sortedPages = currentUnit.pages.sort((a, b) => a.order - b.order);
     const currentIndex = sortedPages.findIndex(page => page._id === currentPage._id);
 
-    return currentModuleIndex > 0 || currentIndex > 0;
+    return currentUnitIndex > 0 || currentIndex > 0;
   };
 
   const hasNextPage = () => {
-    if (!currentModule || !currentModule.pages || !course) return false;
+    if (!currentUnit || !currentUnit.pages || !course) return false;
 
-    const currentModuleIndex = course.modules.findIndex(module => module._id === currentModule._id);
-    const sortedPages = currentModule.pages.sort((a, b) => a.order - b.order);
+    const currentUnitIndex = course.modules.findIndex(unit => unit._id === currentUnit._id);
+    const sortedPages = currentUnit.pages.sort((a, b) => a.order - b.order);
     const currentIndex = sortedPages.findIndex(page => page._id === currentPage._id);
 
-    return currentModuleIndex < course.modules.length - 1 || currentIndex < sortedPages.length - 1;
+    return currentUnitIndex < course.modules.length - 1 || currentIndex < sortedPages.length - 1;
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -129,6 +147,20 @@ const CourseDetail = () => {
 
   const getQuizStatusColor = (completed) => {
     return completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+  };
+
+  const markUnitComplete = async (unitId) => {
+    try {
+      const response = await axios.post(`/api/courses/${courseId}/module/${unitId}/complete`);
+      if (response.data.message === 'Module already completed') {
+        // Unit was already completed, no need to show notification
+        return;
+      }
+      toast.success(`🎉 ${course.structure?.unitLabel || 'Unit'} completed! You earned ${response.data.gemsAwarded} gems!`);
+    } catch (error) {
+      console.error('Failed to mark unit complete:', error);
+      // Don't show error toast as this might be called multiple times
+    }
   };
 
   if (loading) {
@@ -161,7 +193,7 @@ const CourseDetail = () => {
   }
 
   // If we have pages, show the PageViewer
-  if (currentPage && currentModule) {
+  if (currentPage && currentUnit) {
     return (
       <div className="min-h-screen bg-gray-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -193,7 +225,10 @@ const CourseDetail = () => {
             onNext={handleNextPage}
             hasPrevious={hasPreviousPage()}
             hasNext={hasNextPage()}
-            moduleTitle={currentModule.title}
+            unitTitle={currentUnit.title}
+            courseStructure={course.structure}
+            courseId={courseId}
+            moduleId={currentUnit._id}
           />
         </div>
       </div>
@@ -221,7 +256,7 @@ const CourseDetail = () => {
               <span className={`px-2 py-1 rounded-full ${getDifficultyColor(course.difficulty)}`}>
                 {course.difficulty}
               </span>
-              <span>📚 {course.modules?.length || 0} modules</span>
+              <span>📚 {course.modules?.length || 0} {course.structure?.unitLabel?.toLowerCase() || 'units'}</span>
               <span>👥 {course.enrollmentCount?.toLocaleString() || 0} enrolled</span>
             </div>
           </div>
@@ -231,49 +266,51 @@ const CourseDetail = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Main Content */}
         <div className="lg:col-span-2">
-          {/* Course Modules */}
+          {/* Course Units */}
           <div className="card">
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Course Modules</h2>
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Course {course.structure?.unitLabel || 'Units'}</h2>
             <div className="space-y-4">
-              {course.modules?.map((module, index) => (
-                <div key={module._id} className="border border-gray-200 rounded-lg p-4">
+              {course.modules?.map((unit, index) => (
+                <div key={unit._id} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
                       <div className="flex items-center mb-2">
                         <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full mr-2">
-                          Module {index + 1}
+                          {course.structure?.unitLabel || 'Unit'} {index + 1}
                         </span>
                       </div>
 
-                      <h3 className="font-semibold text-gray-900 mb-1">{module.title}</h3>
-                      <p className="text-gray-600 text-sm mb-3">{module.description}</p>
+                      <h3 className="font-semibold text-gray-900 mb-1">{unit.title}</h3>
+                      <p className="text-gray-600 text-sm mb-3">{unit.description}</p>
 
                       <div className="flex items-center text-sm text-gray-500">
-                        <span className="mr-4">📄 {module.pages?.length || 0} pages</span>
-                        <span>⏱️ {module.estimatedTime} mins</span>
+                        <span className="mr-4">📄 {unit.pages?.length || 0} pages</span>
+                        <span>⏱️ {unit.estimatedTime} mins</span>
                       </div>
                     </div>
 
                     <div className="ml-4">
                       <button
                         onClick={() => {
-                          setCurrentModule(module);
-                          if (module.pages && module.pages.length > 0) {
-                            const sortedPages = module.pages.sort((a, b) => a.order - b.order);
+                          setCurrentUnit(unit);
+                          if (unit.pages && unit.pages.length > 0) {
+                            const sortedPages = unit.pages.sort((a, b) => a.order - b.order);
                             setCurrentPage(sortedPages[0]);
                             setPageIndex(0);
                           }
+                          // Scroll to top when starting a unit
+                          window.scrollTo(0, 0);
                         }}
                           className="btn-primary"
-                        disabled={!module.pages || module.pages.length === 0}
+                        disabled={!unit.pages || unit.pages.length === 0}
                         >
-                        {module.pages && module.pages.length > 0 ? 'Start Module' : 'No Pages Yet'}
+                        {unit.pages && unit.pages.length > 0 ? `Start ${course.structure?.unitLabel || 'Unit'}` : 'No Pages Yet'}
                       </button>
                     </div>
                   </div>
                 </div>
               )) || (
-                <p className="text-gray-500">No modules available for this course.</p>
+                <p className="text-gray-500">No {course.structure?.unitLabel?.toLowerCase() || 'units'} available for this course.</p>
               )}
             </div>
           </div>

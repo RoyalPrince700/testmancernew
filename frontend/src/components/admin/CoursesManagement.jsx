@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../../utils/adminApi';
 import { toast } from 'react-hot-toast';
-import { MdMenuBook } from 'react-icons/md';
+import { MdMenuBook, MdWarning } from 'react-icons/md';
 
 const CoursesManagement = () => {
   const [courses, setCourses] = useState([]);
@@ -246,7 +246,7 @@ const CoursesManagement = () => {
                       ))}
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
-                      Category: {course.category} | Modules: {course.modules?.length || 0}
+                      Category: {course.category} | {course.structure?.unitLabel || 'Modules'}: {course.modules?.length || 0}
                     </p>
                     {course.audience && (
                       <div className="text-sm text-gray-500 mt-1">
@@ -318,9 +318,9 @@ const CourseManager = ({ course, onUpdate }) => {
   }, [course._id]);
 
   const loadModules = async () => {
-    const result = await adminApi.modules.getModules(course._id);
+    const result = await adminApi.units.getUnits(course._id);
     if (result.success) {
-      setModules(result.data.modules);
+      setModules(result.data.units);
     } else {
       toast.error(result.error);
     }
@@ -328,10 +328,10 @@ const CourseManager = ({ course, onUpdate }) => {
 
   const handleModuleSubmit = async (e) => {
     e.preventDefault();
-    const result = await adminApi.modules.createModule(course._id, moduleForm);
+    const result = await adminApi.units.createUnit(course._id, moduleForm);
     if (result.success) {
-      toast.success('Module created successfully!');
-      setModules([...modules, result.data.module]);
+      toast.success(`${course.structure?.unitLabel || 'Module'} created successfully!`);
+      setModules([...modules, result.data.unit]);
       setShowModuleForm(false);
       setModuleForm({ title: '', description: '', order: modules.length + 1, estimatedTime: 30 });
     } else {
@@ -354,11 +354,11 @@ const CourseManager = ({ course, onUpdate }) => {
   };
 
   const handleDeleteModule = async (moduleId) => {
-    if (!confirm('Are you sure you want to delete this module?')) return;
+    if (!confirm(`Are you sure you want to delete this ${course.structure?.unitLabel?.toLowerCase() || 'module'}?`)) return;
 
-    const result = await adminApi.modules.deleteModule(course._id, moduleId);
+    const result = await adminApi.units.deleteUnit(course._id, moduleId);
     if (result.success) {
-      toast.success('Module deleted successfully!');
+      toast.success(`${course.structure?.unitLabel || 'Module'} deleted successfully!`);
       setModules(modules.filter(m => m._id !== moduleId));
     } else {
       toast.error(result.error);
@@ -367,30 +367,44 @@ const CourseManager = ({ course, onUpdate }) => {
 
   return (
     <div className="space-y-4">
+      {/* Deprecation Notice */}
+      <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+        <div className="flex items-start">
+          <MdWarning className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+          <div className="text-sm">
+            <p className="font-medium text-yellow-800">Legacy Module Management</p>
+            <p className="text-yellow-700 mt-1">
+              This interface uses the legacy "Module" terminology. Consider migrating to the new structured course system
+              with dynamic unit labels ({course.structure?.unitLabel || 'Module'}, Chapter, Section, etc.) for better content organization.
+            </p>
+          </div>
+        </div>
+      </div>
+
       <div className="flex gap-2">
         <button
           onClick={() => setShowModuleForm(!showModuleForm)}
           className="bg-green-600 text-white px-3 py-1 rounded text-sm hover:bg-green-700 transition-colors"
         >
-          {showModuleForm ? 'Cancel' : 'Add Module'}
+          {showModuleForm ? 'Cancel' : `Add ${course.structure?.unitLabel || 'Module'}`}
         </button>
       </div>
 
       {/* Module Form */}
       {showModuleForm && (
         <div className="bg-gray-50 p-4 rounded-md">
-          <h4 className="font-medium mb-2">Create Module</h4>
+          <h4 className="font-medium mb-2">Create {course.structure?.unitLabel || 'Module'}</h4>
           <form onSubmit={handleModuleSubmit} className="space-y-2">
             <input
               type="text"
-              placeholder="Module Title"
+              placeholder={`${course.structure?.unitLabel || 'Module'} Title`}
               value={moduleForm.title}
               onChange={(e) => setModuleForm({...moduleForm, title: e.target.value})}
               className="w-full px-3 py-2 border border-gray-300 rounded text-sm"
               required
             />
             <textarea
-              placeholder="Module Description"
+              placeholder={`${course.structure?.unitLabel || 'Module'} Description`}
               value={moduleForm.description}
               onChange={(e) => setModuleForm({...moduleForm, description: e.target.value})}
               rows={2}
@@ -418,7 +432,7 @@ const CourseManager = ({ course, onUpdate }) => {
               />
             </div>
             <div className="flex gap-2">
-              <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded text-sm">Create</button>
+              <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded text-sm">Create {course.structure?.unitLabel || 'Module'}</button>
               <button type="button" onClick={() => setShowModuleForm(false)} className="bg-gray-600 text-white px-3 py-1 rounded text-sm">Cancel</button>
             </div>
           </form>
@@ -443,7 +457,7 @@ const CourseManager = ({ course, onUpdate }) => {
                   }}
                   className="bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
                 >
-                  {selectedModule === module._id ? 'Hide' : 'Pages'}
+                  {selectedModule === module._id ? 'Hide' : `${course.structure?.unitLabel || 'Module'} Pages`}
                 </button>
                 <button
                   onClick={() => handleDeleteModule(module._id)}
@@ -462,14 +476,14 @@ const CourseManager = ({ course, onUpdate }) => {
                     onClick={() => setShowPageForm(!showPageForm)}
                     className="bg-green-500 text-white px-2 py-1 rounded text-xs hover:bg-green-600"
                   >
-                    {showPageForm ? 'Cancel' : 'Add Page'}
+                    {showPageForm ? 'Cancel' : `Add ${course.structure?.unitLabel || 'Module'} Page`}
                   </button>
                 </div>
 
                 {/* Page Form */}
                 {showPageForm && (
                   <div className="bg-white p-3 rounded border mb-3">
-                    <h6 className="font-medium mb-2 text-sm">Create Page</h6>
+                    <h6 className="font-medium mb-2 text-sm">Create {course.structure?.unitLabel || 'Module'} Page</h6>
                     <form onSubmit={handlePageSubmit} className="space-y-2">
                       <input
                         type="text"
@@ -513,7 +527,7 @@ const CourseManager = ({ course, onUpdate }) => {
                         className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
                       />
                       <div className="flex gap-2">
-                        <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded text-sm">Create Page</button>
+                        <button type="submit" className="bg-blue-600 text-white px-3 py-1 rounded text-sm">Create {course.structure?.unitLabel || 'Module'} Page</button>
                         <button type="button" onClick={() => setShowPageForm(false)} className="bg-gray-600 text-white px-3 py-1 rounded text-sm">Cancel</button>
                       </div>
                     </form>
@@ -532,7 +546,7 @@ const CourseManager = ({ course, onUpdate }) => {
                         <button className="text-red-600 hover:text-red-800 text-xs">Delete</button>
                       </div>
                     </div>
-                  )) || <p className="text-gray-500 text-sm">No pages yet</p>}
+                  )) || <p className="text-gray-500 text-sm">No {course.structure?.unitLabel?.toLowerCase() || 'module'} pages yet</p>}
                 </div>
               </div>
             )}

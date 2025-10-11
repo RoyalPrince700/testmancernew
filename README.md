@@ -5,9 +5,10 @@ TestMancer is a comprehensive gamified educational platform designed to help stu
 ## 🚀 Features
 
 ### 🎯 Core Learning Platform
-- **Interactive Courses**: Comprehensive course modules with fine-grained page-based content delivery
-- **Gamified Quizzes**: Test your knowledge with quizzes triggered per-page or at course completion
-- **Progress Tracking**: Detailed progress monitoring through modules and pages
+- **Structured Courses**: Hierarchical course organization with chapters, modules, sections, or topics
+- **Page-Based Content**: Fine-grained content delivery with rich text, audio, video, and attachments
+- **Context-Aware Quizzes**: Quizzes triggered at unit completion or specific page locations
+- **Smart Progress Tracking**: Detailed progress monitoring through units and pages with resume functionality
 - **Multiple Learning Paths**: Support for WAEC, Post-UTME, JAMB, TOEFL, IELTS, and undergraduate courses
 - **Audience Targeting**: Courses filtered by university, faculty, and level for personalized learning
 
@@ -230,21 +231,23 @@ testmancer/
 - **User Management**: Assign roles and manage user permissions (full admin only)
 
 ### Content Structure
-- **Courses**: Top-level learning containers with metadata and audience targeting
-- **Modules**: Organized sections within courses with estimated completion times
-- **Pages**: Fine-grained content units with HTML text, media attachments, and order
-- **Quizzes**: Assessment tools triggered at specific points in the learning journey
+- **Courses**: Top-level learning containers with metadata, audience targeting, and structure configuration
+- **Units**: Flexible organizational units (chapters, modules, sections, or topics) with estimated completion times
+- **Pages**: Fine-grained content units with rich HTML text, media attachments, and navigation order
+- **Quizzes**: Assessment tools triggered at unit completion or specific page locations (first-attempt gem rewards)
+- **Structure Metadata**: Configurable unit types, labels, and counts for course organization
 - **Media Assets**: Audio/video files hosted on Cloudinary with secure URLs
 
 ### API Endpoints (Admin)
 ```
 POST   /api/admin/uploads/audio     # Upload audio files (mp3/m4a/wav)
 POST   /api/admin/uploads/video     # Upload video files (mp4)
-POST   /api/admin/courses           # Create new course
-PUT    /api/admin/courses/:id       # Update course
+POST   /api/admin/courses           # Create new course with structure metadata
+PUT    /api/admin/courses/:id       # Update course structure and metadata
 DELETE /api/admin/courses/:id       # Delete course
-POST   /api/admin/courses/:id/modules # Add module to course
-POST   /api/admin/quizzes           # Create quiz
+POST   /api/admin/courses/:id/units # Add unit (chapter/module/section/topic) to course
+POST   /api/admin/courses/:id/units/:unitId/pages # Add page to unit
+POST   /api/admin/quizzes           # Create quiz (unit or page triggered)
 PUT    /api/admin/users/:id/role    # Change user role (admin only)
 ```
 
@@ -254,21 +257,21 @@ This project follows a structured milestone approach. See `todo.md` for the comp
 
 ### Completed Milestones
 - ✅ **M0**: Baseline cleanup and guardrails (categories normalization, role system)
+- ✅ **M1**: Undergraduate onboarding fields and selection
+- ✅ **M2**: Course audience targeting and page-based structure
+- ✅ **M3**: Media uploads via Cloudinary
+- ✅ **M4**: Admin course/page authoring APIs
+- ✅ **M5**: Quiz authoring and delivery
+- ✅ **M6**: Rewards logic and gem system (first-attempt logic)
+- ✅ **M7**: Personalized course listings
+- ✅ **M8**: Segmented leaderboards
+- ✅ **M9**: Admin dashboard frontend
+- ✅ **M10**: Enhanced learner dashboard
+- ✅ **M11**: Structured courses (chapters/modules/sections/topics)
+- ✅ **M12**: Comprehensive testing suite
 - ✅ **M2.5**: Advanced role management and permissions
 
 ### Upcoming Milestones
-- 🔄 **M1**: Undergraduate onboarding fields and selection
-- 🔄 **M2**: Course audience targeting and page-based structure
-- 🔄 **M3**: Media uploads via Cloudinary
-- 🔄 **M4**: Admin course/page authoring APIs
-- 🔄 **M5**: Quiz authoring and delivery
-- 🔄 **M6**: Rewards logic and gem system
-- 🔄 **M7**: Personalized course listings
-- 🔄 **M8**: Segmented leaderboards
-- 🔄 **M9**: Admin dashboard frontend
-- 🔄 **M10**: Enhanced learner dashboard
-- 🔄 **M11**: Games section integration
-- 🔄 **M12**: Seeds, tests, and migrations
 - 🔄 **M13**: Deployment and quality hardening
 
 ## 🔒 Security & Permissions
@@ -340,11 +343,15 @@ npm run migrate:m3  # Advanced permissions
 
 ### Public Endpoints
 ```
-GET    /api/courses                 # List available courses
-GET    /api/courses/:id             # Get course details
-GET    /api/courses/personalized    # Get courses for user profile
-GET    /api/quizzes/:id             # Get quiz details
-POST   /api/quizzes/:id/submit      # Submit quiz answers
+GET    /api/courses                 # List available courses with structure metadata
+GET    /api/courses/:id             # Get course details with units and pages
+GET    /api/courses/:id/units       # Get units for a course (alias for modules)
+GET    /api/courses/:id/units/:unitId/pages # Get pages for a unit
+GET    /api/courses/personalized    # Get courses for user profile with progress
+GET    /api/quizzes/:id             # Get quiz details (unit or page triggered)
+GET    /api/quizzes/unit/:unitId    # Get unit-triggered quiz
+GET    /api/quizzes/page/:courseId/:unitId/:pageOrder # Get page-triggered quiz
+POST   /api/quizzes/:id/submit      # Submit quiz answers (first-attempt gem logic)
 GET    /api/leaderboard/university  # University rankings
 GET    /api/leaderboard/faculty     # Faculty rankings
 GET    /api/leaderboard/level       # Level rankings
@@ -375,17 +382,18 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ### Current Capabilities
 - ✅ User authentication and profile management
-- ✅ Basic course and quiz consumption
-- ✅ Category-based learning paths
-- ✅ Role-based access control system
-- ✅ Admin user management interface
+- ✅ Structured courses with hierarchical organization (chapters/modules/sections/topics)
+- ✅ Page-based content delivery with rich media support
+- ✅ Context-aware quizzes (unit and page triggered) with first-attempt gem rewards
+- ✅ Category-based learning paths and audience targeting
+- ✅ Role-based access control system with scoped permissions
+- ✅ Admin content authoring with media upload capabilities
+- ✅ Segmented leaderboards and progress tracking
+- ✅ Comprehensive testing suite
 
 ### In Development
-- 🔄 Undergraduate pathway with institution selection
-- 🔄 Page-based course content with media support
-- 🔄 Advanced admin content authoring
-- 🔄 Segmented leaderboards and enhanced gamification
 - 🔄 Mini-games integration
+- 🔄 Advanced deployment and quality hardening
 
 ---
 

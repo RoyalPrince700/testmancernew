@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const Quiz = () => {
@@ -35,80 +36,23 @@ const Quiz = () => {
 
   const fetchQuiz = async () => {
     try {
-      // TODO: Replace with actual API call
-      // Mock data for now
-      const mockQuiz = {
-        id: parseInt(quizId),
-        title: 'JavaScript Fundamentals Quiz',
-        description: 'Test your knowledge of JavaScript basics',
-        duration: 1800, // 30 minutes in seconds
-        questions: [
-          {
-            id: 1,
-            question: 'What is the correct way to declare a variable in JavaScript?',
-            options: [
-              'var myVariable;',
-              'variable myVariable;',
-              'v myVariable;',
-              'declare myVariable;'
-            ],
-            correctAnswer: 0,
-            explanation: 'In JavaScript, variables can be declared using var, let, or const keywords.'
-          },
-          {
-            id: 2,
-            question: 'Which of the following is NOT a JavaScript data type?',
-            options: [
-              'String',
-              'Boolean',
-              'Integer',
-              'Undefined'
-            ],
-            correctAnswer: 2,
-            explanation: 'JavaScript has 7 primitive data types: String, Number, Boolean, Undefined, Null, Symbol, and BigInt. Integer is not a separate data type.'
-          },
-          {
-            id: 3,
-            question: 'What will `console.log(typeof null)` output?',
-            options: [
-              '"null"',
-              '"object"',
-              '"undefined"',
-              'Error'
-            ],
-            correctAnswer: 1,
-            explanation: 'This is a well-known quirk in JavaScript. typeof null returns "object" due to a bug in the original implementation.'
-          },
-          {
-            id: 4,
-            question: 'Which method is used to add an element to the end of an array?',
-            options: [
-              'push()',
-              'add()',
-              'append()',
-              'insert()'
-            ],
-            correctAnswer: 0,
-            explanation: 'The push() method adds one or more elements to the end of an array and returns the new length of the array.'
-          },
-          {
-            id: 5,
-            question: 'What does the === operator do in JavaScript?',
-            options: [
-              'Assigns a value',
-              'Compares values only',
-              'Compares values and types',
-              'Creates an object'
-            ],
-            correctAnswer: 2,
-            explanation: 'The strict equality operator (===) compares both value and type, unlike == which performs type coercion.'
-          }
-        ]
-      };
-
-      setQuiz(mockQuiz);
-      setTimeLeft(mockQuiz.duration);
+      const response = await axios.get(`/api/quizzes/${quizId}`);
+      setQuiz({
+        id: response.data.quiz._id,
+        title: response.data.quiz.title,
+        description: response.data.quiz.description,
+        duration: response.data.quiz.timeLimit || 1800, // Default 30 minutes
+        questions: response.data.quiz.questions.map((q, index) => ({
+          id: q._id,
+          question: q.question,
+          options: q.options,
+          correctAnswer: q.correctAnswer,
+          explanation: q.explanation || 'No explanation provided.'
+        }))
+      });
+      setTimeLeft(response.data.quiz.timeLimit || 1800);
     } catch (error) {
+      console.error('Failed to load quiz:', error);
       toast.error('Failed to load quiz');
     } finally {
       setLoading(false);
@@ -143,30 +87,36 @@ const Quiz = () => {
 
     setSubmitting(true);
     try {
-      // Calculate score
-      let correctAnswers = 0;
-      quiz.questions.forEach(question => {
-        if (selectedAnswers[question.id] === question.correctAnswer) {
-          correctAnswers++;
-        }
+      // Convert selectedAnswers to array format expected by backend
+      const answers = quiz.questions.map(question => {
+        return selectedAnswers[question.id] !== undefined ? selectedAnswers[question.id] : -1;
       });
 
-      const score = Math.round((correctAnswers / quiz.questions.length) * 100);
+      // Submit quiz to backend
+      const response = await axios.post(`/api/quizzes/${quizId}/submit`, {
+        answers
+      });
 
-      // TODO: Submit quiz results to API
+      const result = response.data;
+
       toast.success('Quiz submitted successfully!');
 
-      // Navigate to results page
+      // Navigate to results page with complete result data
       navigate(`/quiz/${quizId}/result`, {
         state: {
           quiz,
           selectedAnswers,
-          score,
-          correctAnswers,
-          totalQuestions: quiz.questions.length
+          score: result.score,
+          correctAnswers: result.correctAnswers,
+          totalQuestions: result.totalQuestions,
+          gemsEarned: result.gemsEarned,
+          totalGems: result.totalGems,
+          questionResults: result.questionResults,
+          completedAt: new Date().toISOString()
         }
       });
     } catch (error) {
+      console.error('Failed to submit quiz:', error);
       toast.error('Failed to submit quiz');
     } finally {
       setSubmitting(false);

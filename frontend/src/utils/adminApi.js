@@ -57,7 +57,7 @@ export const courseApi = {
   }
 };
 
-// Module CRUD operations
+// Module CRUD operations (DEPRECATED - use units API instead)
 export const moduleApi = {
   // Get all modules for a course
   getModules: async (courseId) => {
@@ -107,6 +107,61 @@ export const moduleApi = {
       return {
         success: false,
         error: error.response?.data?.message || 'Failed to delete module'
+      };
+    }
+  }
+};
+
+// Units CRUD operations (preferred API - supports dynamic unit labels)
+export const unitsApi = {
+  // Get all units for a course (includes course structure metadata)
+  getUnits: async (courseId) => {
+    try {
+      const response = await axios.get(`/api/courses/admin/courses/${courseId}/units`);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to fetch units'
+      };
+    }
+  },
+
+  // Create unit
+  createUnit: async (courseId, unitData) => {
+    try {
+      const response = await axios.post(`/api/courses/admin/courses/${courseId}/units`, unitData);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to create unit'
+      };
+    }
+  },
+
+  // Update unit
+  updateUnit: async (courseId, unitId, updates) => {
+    try {
+      const response = await axios.put(`/api/courses/admin/courses/${courseId}/units/${unitId}`, updates);
+      return { success: true, data: response.data };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to update unit'
+      };
+    }
+  },
+
+  // Delete unit
+  deleteUnit: async (courseId, unitId) => {
+    try {
+      await axios.delete(`/api/courses/admin/courses/${courseId}/units/${unitId}`);
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.message || 'Failed to delete unit'
       };
     }
   }
@@ -293,7 +348,8 @@ export const userApi = {
 // Combined admin API object
 export const adminApi = {
   courses: courseApi,
-  modules: moduleApi,
+  modules: moduleApi, // DEPRECATED - use units instead
+  units: unitsApi, // Preferred API for dynamic unit labels
   pages: pageApi,
   quizzes: quizApi,
   users: userApi

@@ -54,7 +54,7 @@ const moduleSchema = new mongoose.Schema({
   },
   content: {
     type: String,
-    required: true
+    required: false
   },
   order: {
     type: Number,
@@ -121,6 +121,24 @@ const courseSchema = new mongoose.Schema({
       type: String,
       trim: true
     }]
+  },
+  structure: {
+    unitType: {
+      type: String,
+      enum: ['chapter', 'module', 'section', 'topic'],
+      default: 'module'
+    },
+    unitLabel: {
+      type: String,
+      default: 'Module',
+      trim: true
+    },
+    unitCount: {
+      type: Number,
+      min: 1,
+      max: 100,
+      default: 1
+    }
   },
   difficulty: {
     type: String,
@@ -190,7 +208,17 @@ courseSchema.virtual('totalEstimatedTime').get(function() {
   return this.modules.reduce((total, module) => total + module.estimatedTime, 0);
 });
 
-// Method to get course progress for a user
+// Virtual getter for units (alias for modules) - note: 'units' field already exists in schema
+courseSchema.virtual('getUnits').get(function() {
+  return this.modules;
+});
+
+// Virtual setter for units (alias for modules)
+courseSchema.virtual('setUnits').set(function(value) {
+  this.modules = value;
+});
+
+// Method to get course progress for a user (legacy - uses completedModules)
 courseSchema.methods.getProgress = function(userCompletedModules) {
   const totalModules = this.modules.length;
   const completedCount = this.modules.filter(module =>
@@ -202,6 +230,96 @@ courseSchema.methods.getProgress = function(userCompletedModules) {
     totalModules,
     progressPercentage: totalModules > 0 ? Math.round((completedCount / totalModules) * 100) : 0,
     isCompleted: completedCount === totalModules
+  };
+};
+
+// Method to get detailed course progress using completion gems tracking
+courseSchema.methods.getDetailedProgress = function(userCompletionGems) {
+  const courseCompletionGems = userCompletionGems.find(completion =>
+    completion.courseId.toString() === this._id.toString()
+  );
+
+  const completedUnits = courseCompletionGems?.completedUnits || [];
+  const completedPages = courseCompletionGems?.completedPages || [];
+
+  // Calculate unit progress
+  const totalUnits = this.modules?.length || 0;
+  const completedUnitCount = this.modules?.filter(module =>
+    completedUnits.some(unitId => unitId.toString() === module._id.toString())
+  ).length || 0;
+
+  // Calculate page progress
+  const allPages = this.modules?.flatMap(module => module.pages || []) || [];
+  const totalPages = allPages.length;
+  const completedPageCount = allPages.filter(page =>
+    completedPages.some(pageId => pageId.toString() === page._id.toString())
+  ).length;
+
+  // Get unit details with completion status
+  const unitDetails = this.modules?.map(module => {
+    const isCompleted = completedUnits.some(unitId =>
+      unitId.toString() === module._id.toString()
+    );
+
+    // Count completed pages in this unit
+    const unitPages = module.pages || [];
+    const completedUnitPages = unitPages.filter(page =>
+      completedPages.some(pageId => pageId.toString() === page._id.toString())
+    ).length;
+
+    return {
+      unitId: module._id,
+      title: module.title,
+      isCompleted,
+      totalPages: unitPages.length,
+      completedPages: completedUnitPages,
+      progressPercentage: unitPages.length > 0 ? Math.round((completedUnitPages / unitPages.length) * 100) : 0
+    };
+  }) || [];
+
+  return {
+    courseId: this._id,
+    courseTitle: this.title,
+    totalUnits,
+    completedUnits: completedUnitCount,
+    totalPages,
+    completedPages: completedPageCount,
+    unitProgressPercentage: totalUnits > 0 ? Math.round((completedUnitCount / totalUnits) * 100) : 0,
+    pageProgressPercentage: totalPages > 0 ? Math.round((completedPageCount / totalPages) * 100) : 0,
+    overallProgressPercentage: totalPages > 0 ? Math.round((completedPageCount / totalPages) * 100) : 0,
+    isCompleted: completedPageCount === totalPages && totalPages > 0,
+    unitDetails,
+    unitLabel: this.structure?.unitLabel || 'Module'
+  };
+};
+
+// Method to get page progress for a specific unit
+courseSchema.methods.getUnitPageProgress = function(unitId, userCompletionGems) {
+  const module = this.modules.find(m => m._id.toString() === unitId.toString());
+  if (!module) return null;
+
+  const courseCompletionGems = userCompletionGems.find(completion =>
+    completion.courseId.toString() === this._id.toString()
+  );
+
+  const completedPages = courseCompletionGems?.completedPages || [];
+
+  const pageDetails = module.pages?.map(page => ({
+    pageId: page._id,
+    title: page.title,
+    order: page.order,
+    isCompleted: completedPages.some(pageId => pageId.toString() === page._id.toString())
+  })) || [];
+
+  const completedPageCount = pageDetails.filter(page => page.isCompleted).length;
+
+  return {
+    unitId: module._id,
+    unitTitle: module.title,
+    totalPages: pageDetails.length,
+    completedPages: completedPageCount,
+    progressPercentage: pageDetails.length > 0 ? Math.round((completedPageCount / pageDetails.length) * 100) : 0,
+    pageDetails
   };
 };
 

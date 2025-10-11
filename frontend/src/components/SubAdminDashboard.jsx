@@ -45,25 +45,32 @@ const SubAdminDashboard = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-[13px] text-gray-800 flex">
-      {/* Sidebar */}
-      <div className={`${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-sm transition-all duration-300 ease-in-out border-r border-gray-200`}>
+    <div className="min-h-screen bg-white text-[13px] text-gray-800">
+      {/* Fixed Sidebar */}
+      <div className={`fixed top-16 left-0 h-[calc(100vh-4rem)] ${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-sm transition-all duration-300 ease-in-out border-r border-gray-200 z-10 group`}>
+        {/* Collapsible Arrow - positioned at middle edge */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="absolute top-1/2 -right-3 transform -translate-y-1/2 z-50 p-1.5 rounded-full bg-white border border-gray-200 shadow-md text-gray-400 hover:text-gray-700 hover:bg-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+          aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+        >
+          {/* Arrow left when expanded */}
+          {sidebarOpen ? (
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          ) : (
+            /* Arrow right when collapsed */
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          )}
+        </button>
+
         <div className="flex flex-col h-full">
-          {/* Sidebar Header (collapse control only) */}
-          <div className="flex items-center justify-end px-3 py-4 border-b border-gray-200">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-1.5 rounded-md text-gray-400 hover:text-gray-700"
-              aria-label="Toggle sidebar"
-            >
-              <svg className={`w-5 h-5 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-            </button>
-          </div>
 
           {/* User Info */}
-          <div className="px-4 py-4 border-b border-gray-200">
+          <div className="px-4 py-4 border-b border-gray-200 flex-shrink-0">
             {sidebarOpen ? (
               <div className="flex items-center">
                 <div className="w-10 h-10 bg-green-500 rounded-full flex items-center justify-center">
@@ -89,7 +96,7 @@ const SubAdminDashboard = () => {
 
           {/* Assignment Scope */}
           {sidebarOpen && (
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
               <p className="text-[11px] font-semibold text-gray-500 uppercase mb-2">Your Scope</p>
               <div className="space-y-1 text-xs">
                 {assignedUniversities.length > 0 && (
@@ -114,8 +121,8 @@ const SubAdminDashboard = () => {
             </div>
           )}
 
-          {/* Navigation */}
-          <nav className="flex-1 px-2 py-3 space-y-6">
+          {/* Navigation - Scrollable */}
+          <nav className="flex-1 px-2 py-3 space-y-6 overflow-y-auto">
             <div>
               {sidebarOpen && (
                 <p className="px-3 mb-2 text-[11px] font-semibold tracking-wide text-gray-500 uppercase">Content Management</p>
@@ -164,7 +171,7 @@ const SubAdminDashboard = () => {
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className={`${sidebarOpen ? 'ml-64' : 'ml-16'} transition-all duration-300 ease-in-out flex flex-col min-h-screen`}>
         <main className="flex-1 overflow-y-auto">
           <div className="p-5">
             {activeTab === 'dashboard' && <SubAdminOverview />}

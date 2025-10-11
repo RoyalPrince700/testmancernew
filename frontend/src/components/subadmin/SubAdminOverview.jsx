@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { MdSchool, MdAccountBalance, MdGrade, MdMenuBook, MdPeople, MdQuiz } from 'react-icons/md';
@@ -60,17 +61,17 @@ const SubAdminOverview = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Sub Admin Dashboard</h1>
-            <p className="text-gray-600 mt-1">
+            <h1 className="text-xl font-semibold text-gray-900">Sub Admin Dashboard</h1>
+            <p className="text-gray-600 mt-1 text-sm">
               Welcome back, {user?.name}! Manage content within your assigned scope.
             </p>
           </div>
           <div className="text-right">
-            <div className="text-sm text-gray-500">Role</div>
-            <div className="font-semibold text-gray-900">{getRoleDisplayName(user?.role)}</div>
+            <div className="text-xs text-gray-500">Role</div>
+            <div className="font-semibold text-gray-900 text-sm">{getRoleDisplayName(user?.role)}</div>
           </div>
         </div>
       </div>
@@ -85,7 +86,7 @@ const SubAdminOverview = () => {
           </div>
           <div className="ml-3">
             <h3 className="text-sm font-medium text-blue-800">Your Permissions</h3>
-            <p className="mt-1 text-sm text-blue-700">
+            <p className="mt-1 text-xs text-blue-700">
               {getRoleDescription(user?.role)}
             </p>
           </div>
@@ -94,33 +95,33 @@ const SubAdminOverview = () => {
 
       {/* Assignment Scope */}
       {(assignedUniversities.length > 0 || assignedFaculties.length > 0 || assignedLevels.length > 0) && (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">Your Assigned Scope</h2>
+        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-3">Your Assigned Scope</h2>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {assignedUniversities.length > 0 && (
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <MdSchool className="w-8 h-8 text-blue-600 mr-3" />
+              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                <MdSchool className="w-5 h-5 text-blue-600 mr-2" />
                 <div>
-                  <div className="font-medium text-gray-900">{assignedUniversities.length} Universities</div>
-                  <div className="text-sm text-gray-500">Assigned institutions</div>
+                  <div className="font-medium text-gray-900 text-sm">{assignedUniversities.length} Universities</div>
+                  <div className="text-xs text-gray-500">Assigned institutions</div>
                 </div>
               </div>
             )}
             {assignedFaculties.length > 0 && (
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <MdAccountBalance className="w-8 h-8 text-green-600 mr-3" />
+              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                <MdAccountBalance className="w-5 h-5 text-green-600 mr-2" />
                 <div>
-                  <div className="font-medium text-gray-900">{assignedFaculties.length} Faculties</div>
-                  <div className="text-sm text-gray-500">Assigned departments</div>
+                  <div className="font-medium text-gray-900 text-sm">{assignedFaculties.length} Faculties</div>
+                  <div className="text-xs text-gray-500">Assigned departments</div>
                 </div>
               </div>
             )}
             {assignedLevels.length > 0 && (
-              <div className="flex items-center p-4 bg-gray-50 rounded-lg">
-                <MdGrade className="w-8 h-8 text-purple-600 mr-3" />
+              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
+                <MdGrade className="w-5 h-5 text-purple-600 mr-2" />
                 <div>
-                  <div className="font-medium text-gray-900">{assignedLevels.length} Levels</div>
-                  <div className="text-sm text-gray-500">Academic levels</div>
+                  <div className="font-medium text-gray-900 text-sm">{assignedLevels.length} Levels</div>
+                  <div className="text-xs text-gray-500">Academic levels</div>
                 </div>
               </div>
             )}
@@ -129,43 +130,43 @@ const SubAdminOverview = () => {
       )}
 
       {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
           <div className="flex items-center">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <MdMenuBook className="w-6 h-6 text-blue-600" />
+            <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600">
+              <MdMenuBook className="w-4 h-4" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Courses Managed</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-3">
+              <p className="text-xs font-medium text-gray-500">Courses Managed</p>
+              <p className="text-lg font-semibold text-gray-900">
                 {stats.loading ? '...' : stats.courses}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
           <div className="flex items-center">
-            <div className="p-2 bg-green-100 rounded-lg">
-              <MdQuiz className="w-6 h-6 text-green-600" />
+            <div className="p-1.5 bg-green-50 rounded-lg text-green-600">
+              <MdQuiz className="w-4 h-4" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Quizzes Created</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-3">
+              <p className="text-xs font-medium text-gray-500">Quizzes Created</p>
+              <p className="text-lg font-semibold text-gray-900">
                 {stats.loading ? '...' : stats.quizzes}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
           <div className="flex items-center">
-            <div className="p-2 bg-purple-100 rounded-lg">
-              <MdPeople className="w-6 h-6 text-purple-600" />
+            <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600">
+              <MdPeople className="w-4 h-4" />
             </div>
-            <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Students Served</p>
-              <p className="text-2xl font-bold text-gray-900">
+            <div className="ml-3">
+              <p className="text-xs font-medium text-gray-500">Students Served</p>
+              <p className="text-lg font-semibold text-gray-900">
                 {stats.loading ? '...' : stats.students}
               </p>
             </div>
@@ -173,22 +174,45 @@ const SubAdminOverview = () => {
         </div>
       </div>
 
+      {/* Content Overview */}
+      <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Content Overview</h2>
+        <div style={{ width: '100%', height: 260 }}>
+          <ResponsiveContainer>
+            <BarChart
+              data={[
+                { name: 'Courses', value: stats.courses || 0 },
+                { name: 'Quizzes', value: stats.quizzes || 0 },
+                { name: 'Students', value: stats.students || 0 }
+              ]}
+              margin={{ top: 10, right: 20, left: 0, bottom: 0 }}
+            >
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" />
+              <YAxis allowDecimals={false} />
+              <Tooltip />
+              <Bar dataKey="value" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Quick Actions</h2>
+      <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
+        <h2 className="text-base font-semibold text-gray-900 mb-3">Quick Actions</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <MdMenuBook className="w-5 h-5 text-blue-600 mr-3" />
+          <button className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <MdMenuBook className="w-4 h-4 text-blue-600 mr-2" />
             <div className="text-left">
-              <div className="font-medium text-gray-900">Manage Courses</div>
-              <div className="text-sm text-gray-500">Create, edit, or delete courses in your scope</div>
+              <div className="font-medium text-gray-900 text-sm">Manage Courses</div>
+              <div className="text-xs text-gray-500">Create, edit, or delete courses in your scope</div>
             </div>
           </button>
-          <button className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <MdQuiz className="w-5 h-5 text-green-600 mr-3" />
+          <button className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+            <MdQuiz className="w-4 h-4 text-green-600 mr-2" />
             <div className="text-left">
-              <div className="font-medium text-gray-900">Create Quizzes</div>
-              <div className="text-sm text-gray-500">Add assessments to your courses</div>
+              <div className="font-medium text-gray-900 text-sm">Create Quizzes</div>
+              <div className="text-xs text-gray-500">Add assessments to your courses</div>
             </div>
           </button>
         </div>

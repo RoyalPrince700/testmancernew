@@ -1,10 +1,45 @@
 import React, { useState, useEffect } from 'react';
-import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaDownload, FaChevronLeft, FaChevronRight } from 'react-icons/fa';
+import { FaPlay, FaPause, FaVolumeUp, FaVolumeMute, FaDownload, FaChevronLeft, FaChevronRight, FaQuestionCircle } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 
-const PageViewer = ({ page, onPrevious, onNext, hasPrevious, hasNext, moduleTitle }) => {
+const PageViewer = ({ page, onPrevious, onNext, hasPrevious, hasNext, unitTitle, courseStructure, courseId, moduleId }) => {
+  const navigate = useNavigate();
   const [audioPlaying, setAudioPlaying] = useState(false);
   const [audioMuted, setAudioMuted] = useState(false);
   const [videoPlaying, setVideoPlaying] = useState(false);
+  const [pageQuiz, setPageQuiz] = useState(null);
+  const [loadingQuiz, setLoadingQuiz] = useState(false);
+
+  // Check for page-level quiz when page changes
+  useEffect(() => {
+    const checkForPageQuiz = async () => {
+      if (!courseId || !moduleId || !page) return;
+
+      setLoadingQuiz(true);
+      try {
+        const response = await fetch(`/api/quizzes/page/${courseId}/${moduleId}/${page.order}`);
+        if (response.ok) {
+          const quiz = await response.json();
+          setPageQuiz(quiz);
+        } else {
+          setPageQuiz(null);
+        }
+      } catch (error) {
+        console.error('Error checking for page quiz:', error);
+        setPageQuiz(null);
+      } finally {
+        setLoadingQuiz(false);
+      }
+    };
+
+    checkForPageQuiz();
+  }, [courseId, moduleId, page]);
+
+  const handleTakeQuiz = () => {
+    if (pageQuiz) {
+      navigate(`/quiz/${pageQuiz._id}`);
+    }
+  };
 
   const handleAudioPlay = () => {
     const audio = document.getElementById('page-audio');
@@ -54,7 +89,7 @@ const PageViewer = ({ page, onPrevious, onNext, hasPrevious, hasNext, moduleTitl
       <div className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-lg font-semibold text-gray-900">{moduleTitle}</h3>
+            <h3 className="text-lg font-semibold text-gray-900">{unitTitle}</h3>
             <h1 className="text-2xl font-bold text-gray-900">{page.title}</h1>
           </div>
           <div className="flex items-center space-x-2">
@@ -74,6 +109,15 @@ const PageViewer = ({ page, onPrevious, onNext, hasPrevious, hasNext, moduleTitl
               >
                 Next
                 <FaChevronRight className="w-4 h-4 ml-1" />
+              </button>
+            )}
+            {pageQuiz && !loadingQuiz && (
+              <button
+                onClick={handleTakeQuiz}
+                className="flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors ml-4"
+              >
+                <FaQuestionCircle className="w-4 h-4 mr-2" />
+                Take Quiz
               </button>
             )}
           </div>

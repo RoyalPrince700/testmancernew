@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, Link } from 'react-router-dom';
+import axios from 'axios';
 import toast from 'react-hot-toast';
 
 const QuizResult = () => {
@@ -21,38 +22,39 @@ const QuizResult = () => {
 
   const fetchQuizResult = async () => {
     try {
-      // TODO: Replace with actual API call
-      // Mock data for now
-      const mockResult = {
-        quiz: {
-          id: parseInt(quizId),
-          title: 'JavaScript Fundamentals Quiz',
-          questions: [
-            {
-              id: 1,
-              question: 'What is the correct way to declare a variable in JavaScript?',
-              options: ['var myVariable;', 'variable myVariable;', 'v myVariable;', 'declare myVariable;'],
-              correctAnswer: 0,
-              explanation: 'In JavaScript, variables can be declared using var, let, or const keywords.'
-            },
-            {
-              id: 2,
-              question: 'Which of the following is NOT a JavaScript data type?',
-              options: ['String', 'Boolean', 'Integer', 'Undefined'],
-              correctAnswer: 2,
-              explanation: 'JavaScript has 7 primitive data types: String, Number, Boolean, Undefined, Null, Symbol, and BigInt. Integer is not a separate data type.'
-            }
-          ]
-        },
-        selectedAnswers: { 1: 0, 2: 2 },
-        score: 100,
-        correctAnswers: 2,
-        totalQuestions: 2,
-        completedAt: new Date().toISOString()
-      };
+      // Try to get quiz results from user's quiz history
+      const historyResponse = await axios.get('/api/quizzes/history/user');
+      const quizHistory = historyResponse.data.quizHistory.find(
+        h => h.quizId.toString() === quizId
+      );
 
-      setResult(mockResult);
+      if (quizHistory) {
+        // Get quiz details
+        const quizResponse = await axios.get(`/api/quizzes/${quizId}`);
+        const quiz = quizResponse.data.quiz;
+
+        // Reconstruct result from history (limited data available)
+        const resultData = {
+          quiz: {
+            id: quiz._id,
+            title: quiz.title,
+            questions: quiz.questions // This might not be available in history
+          },
+          score: quizHistory.score,
+          correctAnswers: quizHistory.correctAnswers,
+          totalQuestions: quizHistory.totalQuestions,
+          completedAt: quizHistory.completedAt,
+          // Note: gemsEarned and totalGems are not stored in history, so we'll show N/A
+          gemsEarned: null,
+          totalGems: null
+        };
+
+        setResult(resultData);
+      } else {
+        throw new Error('Quiz result not found');
+      }
     } catch (error) {
+      console.error('Failed to load quiz results:', error);
       toast.error('Failed to load quiz results');
     } finally {
       setLoading(false);
@@ -128,6 +130,33 @@ const QuizResult = () => {
             </div>
           </div>
 
+          {/* Gems Earned */}
+          {result.gemsEarned !== null && result.totalGems !== null && (
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border border-yellow-200 rounded-lg p-4 mb-6">
+              <div className="text-center">
+                <div className="flex items-center justify-center gap-2 mb-2">
+                  <span className="text-2xl">💎</span>
+                  <span className="text-lg font-semibold text-gray-900">Gems Earned</span>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-center">
+                  <div>
+                    <div className="text-3xl font-bold text-green-600">+{result.gemsEarned}</div>
+                    <div className="text-sm text-gray-600">This Attempt</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold text-purple-600">{result.totalGems}</div>
+                    <div className="text-sm text-gray-600">Total Gems</div>
+                  </div>
+                </div>
+                {result.gemsEarned > 0 && (
+                  <p className="text-sm text-green-700 mt-2">
+                    🎉 Congratulations! You earned {result.gemsEarned} gem{result.gemsEarned !== 1 ? 's' : ''} for your first-attempt correct answers!
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Stats */}
           <div className="grid grid-cols-3 gap-6 mb-6">
             <div>
@@ -157,8 +186,9 @@ const QuizResult = () => {
         <h3 className="text-xl font-semibold text-gray-900 mb-6">Question Review</h3>
         <div className="space-y-6">
           {result.quiz.questions.map((question, index) => {
-            const userAnswer = result.selectedAnswers[question.id];
-            const isCorrect = userAnswer === question.correctAnswer;
+            const questionResult = result.questionResults ? result.questionResults[index] : null;
+            const userAnswer = result.selectedAnswers ? result.selectedAnswers[question.id] : (questionResult ? questionResult.userAnswer : -1);
+            const isCorrect = questionResult ? questionResult.isCorrect : (userAnswer === question.correctAnswer);
 
             return (
               <div key={question.id} className="border border-gray-200 rounded-lg p-6">

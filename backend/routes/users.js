@@ -180,6 +180,36 @@ router.get('/stats', authenticateToken, async (req, res) => {
         correctAnswers: quiz.correctAnswers
       }));
 
+    // Calculate recent gem earnings (last 7 days)
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentGemEarnings = user.quizHistory
+      .filter(quiz => new Date(quiz.completedAt) >= sevenDaysAgo)
+      .reduce((total, quiz) => {
+        // Calculate gems earned in this quiz (approximate)
+        // Since we don't store gems per quiz, we'll estimate based on score
+        const estimatedGems = Math.floor((quiz.correctAnswers / quiz.totalQuestions) * quiz.totalQuestions);
+        return total + estimatedGems;
+      }, 0);
+
+    // Get course progress data
+    const courses = await Course.find().select('title modules structure');
+    const courseProgress = courses.map(course => {
+      const totalUnits = course.structure?.unitCount || course.modules?.length || 0;
+      const completedUnits = user.completedModules.filter(moduleId =>
+        course.modules.some(module => module._id.toString() === moduleId.toString())
+      ).length;
+
+      return {
+        courseId: course._id,
+        courseTitle: course.title,
+        totalUnits,
+        completedUnits,
+        progressPercentage: totalUnits > 0 ? Math.round((completedUnits / totalUnits) * 100) : 0,
+        unitLabel: course.structure?.unitLabel || 'Module'
+      };
+    }).filter(progress => progress.totalUnits > 0); // Only include courses with units
+
     const stats = {
       totalQuizzes,
       completedQuizzes,
@@ -187,14 +217,152 @@ router.get('/stats', authenticateToken, async (req, res) => {
       averageScore,
       rank: userRank || 1,
       totalGems: user.gems,
+      recentGems: recentGemEarnings,
       completedModules: user.completedModules.length,
       learningCategories: user.learningCategories,
-      recentQuizzes
+      recentQuizzes,
+      courseProgress
     };
 
     res.json({ stats });
   } catch (error) {
     console.error('Error fetching user stats:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Mark unit as completed and award gems if first attempt
+router.post('/complete-unit', authenticateToken, async (req, res) => {
+  try {
+    const { courseId, unitId } = req.body;
+
+    // Validate required fields
+    if (!courseId || !unitId) {
+      return res.status(400).json({
+        message: 'Course ID and Unit ID are required'
+      });
+    }
+
+    // Verify course exists and unit belongs to course
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    const unitExists = course.modules.some(module => module._id.toString() === unitId);
+    if (!unitExists) {
+      return res.status(404).json({ message: 'Unit not found in course' });
+    }
+
+    // Get user
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Record completion gem (only awards if first attempt)
+    const wasAwarded = await user.recordCompletionGemForUnit(courseId, unitId);
+    const gemsAwarded = wasAwarded ? 3 : 0;
+
+    res.json({
+      message: 'Unit completion recorded successfully',
+      gemsAwarded,
+      totalGems: user.gems,
+      firstAttempt: wasAwarded
+    });
+
+  } catch (error) {
+    console.error('Error recording unit completion:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Mark page as completed and award gems if first attempt
+router.post('/complete-page', authenticateToken, async (req, res) => {
+  try {
+    const { courseId, pageId } = req.body;
+
+    // Validate required fields
+    if (!courseId || !pageId) {
+      return res.status(400).json({
+        message: 'Course ID and Page ID are required'
+      });
+    }
+
+    // Verify course exists and page belongs to course
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    let pageFound = false;
+    for (const module of course.modules) {
+      if (module.pages && module.pages.some(page => page._id.toString() === pageId)) {
+        pageFound = true;
+        break;
+      }
+    }
+
+    if (!pageFound) {
+      return res.status(404).json({ message: 'Page not found in course' });
+    }
+
+    // Get user
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Record completion gem (only awards if first attempt)
+    const wasAwarded = await user.recordCompletionGemForPage(courseId, pageId);
+    const gemsAwarded = wasAwarded ? 3 : 0;
+
+    res.json({
+      message: 'Page completion recorded successfully',
+      gemsAwarded,
+      totalGems: user.gems,
+      firstAttempt: wasAwarded
+    });
+
+  } catch (error) {
+    console.error('Error recording page completion:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get detailed course progress with unit/page status
+router.get('/course-progress/:courseId', authenticateToken, async (req, res) => {
+  try {
+    const { courseId } = req.params;
+
+    // Get course with full details
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Get user
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get detailed progress using the new method
+    const progress = course.getDetailedProgress(user.completionGems);
+
+    res.json({
+      course: {
+        id: course._id,
+        title: course.title,
+        courseCode: course.courseCode,
+        description: course.description,
+        unitLabel: course.structure?.unitLabel || 'Module'
+      },
+      progress
+    });
+
+  } catch (error) {
+    console.error('Error fetching course progress:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

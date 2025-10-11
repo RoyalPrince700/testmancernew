@@ -1,8 +1,10 @@
 import express from 'express';
 import Course from '../models/Course.js';
 import User from '../models/User.js';
+import Quiz from '../models/Quiz.js';
 import { authenticateToken, requirePermission } from '../middleware/auth.js';
 import Joi from 'joi';
+import sanitizeHtml from 'sanitize-html';
 
 const router = express.Router();
 
@@ -63,7 +65,9 @@ router.get('/personalized', authenticateToken, async (req, res) => {
     }
 
     // Get courses that match the filters
+    console.log(`Fetching personalized courses with filter:`, filter);
     const courses = await Course.find(filter).populate('modules');
+    console.log(`Found ${courses.length} personalized courses:`, courses.map(c => ({ id: c._id, title: c.title })));
 
     // Add progress information for each course
     const coursesWithProgress = await Promise.all(
@@ -96,15 +100,76 @@ router.get('/personalized', authenticateToken, async (req, res) => {
   }
 });
 
-// Get course by ID
+// Get course by ID with quiz attachments and progress
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
+    console.log(`Fetching course with ID: ${req.params.id}`);
     const course = await Course.findById(req.params.id).populate('modules');
+
     if (!course) {
+      console.log(`Course not found: ${req.params.id}`);
+      // Check if course exists without population
+      const courseExists = await Course.findById(req.params.id);
+      console.log(`Course exists without population: ${!!courseExists}`);
       return res.status(404).json({ message: 'Course not found' });
     }
-    res.json({ course });
+
+    console.log(`Course found: ${course.title} (ID: ${course._id})`);
+
+    // Get quizzes attached to this course
+    const quizzes = await Quiz.find({
+      courseId: req.params.id,
+      isActive: true
+    }).select('_id title description moduleId trigger pageOrder difficulty totalQuestions');
+
+    // Get user for progress calculation
+    const user = await User.findById(req.user.userId);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Calculate progress using new detailed progress method
+    const progress = course.getDetailedProgress(user.completionGems);
+
+    // Enhance modules with quiz information
+    const modulesWithQuizzes = course.modules.map(module => {
+      const moduleQuizzes = quizzes.filter(quiz =>
+        quiz.moduleId?.toString() === module._id.toString()
+      );
+
+      return {
+        ...module.toObject(),
+        quizzes: moduleQuizzes.map(quiz => ({
+          id: quiz._id,
+          title: quiz.title,
+          description: quiz.description,
+          trigger: quiz.trigger,
+          pageOrder: quiz.pageOrder,
+          difficulty: quiz.difficulty,
+          totalQuestions: quiz.totalQuestions
+        }))
+      };
+    });
+
+    const courseWithProgress = {
+      ...course.toObject(),
+      modules: modulesWithQuizzes,
+      quizzes: quizzes.map(quiz => ({
+        id: quiz._id,
+        title: quiz.title,
+        description: quiz.description,
+        moduleId: quiz.moduleId,
+        trigger: quiz.trigger,
+        pageOrder: quiz.pageOrder,
+        difficulty: quiz.difficulty,
+        totalQuestions: quiz.totalQuestions
+      })),
+      progress
+    };
+
+    res.json({ course: courseWithProgress });
   } catch (error) {
+    console.error('Error fetching course:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -241,7 +306,8 @@ router.post('/admin/courses', authenticateToken, requirePermission('manage_cours
       description: courseData.description,
       units: courseData.units,
       tags: courseData.tags || [],
-      audience: courseData.audience || {}
+      audience: courseData.audience || {},
+      structure: courseData.structure || {}
     });
 
     await course.save();
@@ -336,54 +402,77 @@ router.delete('/admin/courses/:id', authenticateToken, requirePermission('manage
 
 // Validation schemas
 const courseSchema = Joi.object({
-  title: Joi.string().min(3).max(200).required(),
-  courseCode: Joi.string().min(1).max(20).required(),
-  description: Joi.string().min(10).max(2000).required(),
+  title: Joi.string().trim().min(3).max(200).required(),
+  courseCode: Joi.string().trim().min(1).max(20).required(),
+  description: Joi.string().trim().min(10).max(2000).required(),
   units: Joi.number().integer().min(1).max(5).required(),
   tags: Joi.array().items(Joi.string().trim().lowercase()).optional(),
   audience: Joi.object({
     universities: Joi.array().items(Joi.string().trim()),
     faculties: Joi.array().items(Joi.string().trim()),
     levels: Joi.array().items(Joi.string().trim())
+  }).optional(),
+  structure: Joi.object({
+    unitType: Joi.string().valid('chapter', 'module', 'section', 'topic').required(),
+    unitLabel: Joi.string().trim().min(1).max(50).pattern(/^[a-zA-Z\s]+$/).required(),
+    unitCount: Joi.number().integer().min(1).max(100).required()
   }).optional()
 });
 
 // Schema for subadmin course creation (tags not required)
 const subadminCourseSchema = Joi.object({
-  title: Joi.string().min(3).max(200).required(),
-  courseCode: Joi.string().min(1).max(20).required(),
-  description: Joi.string().min(10).max(2000).required(),
+  title: Joi.string().trim().min(3).max(200).required(),
+  courseCode: Joi.string().trim().min(1).max(20).required(),
+  description: Joi.string().trim().min(10).max(2000).required(),
   units: Joi.number().integer().min(1).max(5).required(),
   audience: Joi.object({
     universities: Joi.array().items(Joi.string().trim()),
     faculties: Joi.array().items(Joi.string().trim()),
     levels: Joi.array().items(Joi.string().trim())
+  }).optional(),
+  structure: Joi.object({
+    unitType: Joi.string().valid('chapter', 'module', 'section', 'topic').required(),
+    unitLabel: Joi.string().trim().min(1).max(50).pattern(/^[a-zA-Z\s]+$/).required(),
+    unitCount: Joi.number().integer().min(1).max(100).required()
   }).optional()
 });
 
 const moduleSchema = Joi.object({
-  title: Joi.string().min(3).max(200).required(),
-  description: Joi.string().min(10).max(1000).required(),
+  title: Joi.string().trim().min(3).max(200).required(),
+  description: Joi.string().trim().min(10).max(1000).required(),
   order: Joi.number().integer().min(1).required(),
-  estimatedTime: Joi.number().integer().min(1).required()
+  estimatedTime: Joi.number().integer().min(1).max(480).required() // Max 8 hours
 });
 
 const pageSchema = Joi.object({
-  title: Joi.string().min(3).max(200).required(),
+  title: Joi.string().trim().min(3).max(200).required(),
   order: Joi.number().integer().min(1).required(),
-  html: Joi.string().min(1).required(),
+  html: Joi.string().trim().min(1).max(50000).custom((value, helpers) => {
+    // Sanitize HTML content
+    const sanitized = sanitizeHtml(value, {
+      allowedTags: ['p', 'br', 'strong', 'em', 'u', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'ul', 'ol', 'li', 'blockquote', 'code', 'pre', 'a', 'img'],
+      allowedAttributes: {
+        'a': ['href', 'target', 'rel'],
+        'img': ['src', 'alt', 'width', 'height']
+      },
+      allowedSchemes: ['http', 'https', 'ftp', 'mailto'],
+      selfClosing: ['img', 'br']
+    });
+    return sanitized;
+  }).required(),
   audioUrl: Joi.string().uri().allow('').optional(),
   videoUrl: Joi.string().uri().allow('').optional(),
   attachments: Joi.array().items(Joi.object({
-    title: Joi.string().min(1).max(200).required(),
+    title: Joi.string().trim().min(1).max(200).required(),
     url: Joi.string().uri().required(),
     type: Joi.string().valid('document', 'image', 'link').required()
   })).optional()
 });
 
-// Module CRUD routes
+// Module CRUD routes (DEPRECATED - use /units endpoints instead)
 // Get all modules for a course
 router.get('/admin/courses/:courseId/modules', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  console.warn(`DEPRECATED: /modules endpoint used by user ${req.user.userId}. Consider migrating to /units endpoint for enhanced course structure support.`);
   try {
     const { courseId } = req.params;
     const user = req.user;
@@ -409,6 +498,7 @@ router.get('/admin/courses/:courseId/modules', authenticateToken, requirePermiss
 
 // Create module for a course
 router.post('/admin/courses/:courseId/modules', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  console.warn(`DEPRECATED: /modules endpoint used by user ${req.user.userId}. Consider migrating to /units endpoint for enhanced course structure support.`);
   try {
     const { courseId } = req.params;
     const user = req.user;
@@ -463,6 +553,7 @@ router.post('/admin/courses/:courseId/modules', authenticateToken, requirePermis
 
 // Update module
 router.put('/admin/courses/:courseId/modules/:moduleId', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  console.warn(`DEPRECATED: /modules endpoint used by user ${req.user.userId}. Consider migrating to /units endpoint for enhanced course structure support.`);
   try {
     const { courseId, moduleId } = req.params;
     const user = req.user;
@@ -517,6 +608,7 @@ router.put('/admin/courses/:courseId/modules/:moduleId', authenticateToken, requ
 
 // Delete module
 router.delete('/admin/courses/:courseId/modules/:moduleId', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  console.warn(`DEPRECATED: /modules endpoint used by user ${req.user.userId}. Consider migrating to /units endpoint for enhanced course structure support.`);
   try {
     const { courseId, moduleId } = req.params;
     const user = req.user;
@@ -737,6 +829,199 @@ router.delete('/admin/courses/:courseId/modules/:moduleId/pages/:pageId', authen
     });
   } catch (error) {
     console.error('Error deleting page:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Units CRUD routes (alias for modules with enhanced metadata)
+// Get all units for a course
+router.get('/admin/courses/:courseId/units', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const user = req.user;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot access units for course outside your assigned scope'
+      });
+    }
+
+    // Return units with course structure metadata
+    const units = course.modules.map(module => ({
+      ...module.toObject(),
+      unitType: course.structure?.unitType || 'module',
+      unitLabel: course.structure?.unitLabel || 'Module'
+    }));
+
+    res.json({
+      units,
+      courseStructure: course.structure
+    });
+  } catch (error) {
+    console.error('Error fetching units:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Create unit for a course
+router.post('/admin/courses/:courseId/units', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    const user = req.user;
+    const unitData = req.body;
+
+    // Validate input
+    const { error } = moduleSchema.validate(unitData);
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot create units for course outside your assigned scope'
+      });
+    }
+
+    // Check if order already exists
+    const existingOrder = course.modules.some(mod => mod.order === unitData.order);
+    if (existingOrder) {
+      return res.status(400).json({ message: 'Unit order must be unique within the course' });
+    }
+
+    const newUnit = {
+      title: unitData.title,
+      description: unitData.description,
+      order: unitData.order,
+      estimatedTime: unitData.estimatedTime,
+      pages: []
+    };
+
+    course.modules.push(newUnit);
+    await course.save();
+
+    const addedUnit = course.modules[course.modules.length - 1];
+
+    // Return unit with structure metadata
+    const unitWithMetadata = {
+      ...addedUnit.toObject(),
+      unitType: course.structure?.unitType || 'module',
+      unitLabel: course.structure?.unitLabel || 'Module'
+    };
+
+    res.status(201).json({
+      unit: unitWithMetadata,
+      message: 'Unit created successfully'
+    });
+  } catch (error) {
+    console.error('Error creating unit:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Update unit
+router.put('/admin/courses/:courseId/units/:unitId', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, unitId } = req.params;
+    const user = req.user;
+    const updates = req.body;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot update units for course outside your assigned scope'
+      });
+    }
+
+    const unitIndex = course.modules.findIndex(mod => mod._id.toString() === unitId);
+    if (unitIndex === -1) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    // Validate updates
+    const { error } = moduleSchema.validate(updates, { allowUnknown: true });
+    if (error) {
+      return res.status(400).json({ message: error.details[0].message });
+    }
+
+    // Check if new order conflicts with existing units
+    if (updates.order && updates.order !== course.modules[unitIndex].order) {
+      const orderExists = course.modules.some((mod, index) =>
+        index !== unitIndex && mod.order === updates.order
+      );
+      if (orderExists) {
+        return res.status(400).json({ message: 'Unit order must be unique within the course' });
+      }
+    }
+
+    // Update unit
+    Object.assign(course.modules[unitIndex], updates);
+    await course.save();
+
+    // Return unit with structure metadata
+    const updatedUnit = {
+      ...course.modules[unitIndex].toObject(),
+      unitType: course.structure?.unitType || 'module',
+      unitLabel: course.structure?.unitLabel || 'Module'
+    };
+
+    res.json({
+      unit: updatedUnit,
+      message: 'Unit updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating unit:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Delete unit
+router.delete('/admin/courses/:courseId/units/:unitId', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, unitId } = req.params;
+    const user = req.user;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot delete units for course outside your assigned scope'
+      });
+    }
+
+    const unitIndex = course.modules.findIndex(mod => mod._id.toString() === unitId);
+    if (unitIndex === -1) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    course.modules.splice(unitIndex, 1);
+    await course.save();
+
+    res.json({
+      message: 'Unit deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting unit:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });

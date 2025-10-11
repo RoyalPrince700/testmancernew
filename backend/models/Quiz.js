@@ -61,10 +61,19 @@ const quizSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Module'
   },
+  trigger: {
+    type: String,
+    enum: ['unit', 'page'],
+    default: 'unit'
+  },
+  pageOrder: {
+    type: Number,
+    min: 1,
+    required: false
+  },
   learningGoals: [{
     type: String,
     enum: ['waec', 'postutme', 'jamb', 'toefl', 'ielts', 'undergraduate'],
-    required: true,
     lowercase: true
   }],
   questions: [questionSchema],

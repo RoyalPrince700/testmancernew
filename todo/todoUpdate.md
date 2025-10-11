@@ -7,4 +7,3 @@ M4 done (backend: role-based CRUD APIs for courses/modules/pages, frontend: Admi
 M7 done (frontend: personalized courses with audience filtering)
 Admin navigation added to navbar (only visible to admin/subadmin users)
 Updated todo.md with role management integration throughout M3-M13
-Next: M5. Quiz authoring and delivery (per page or end-of-course)

@@ -7,6 +7,7 @@ import { Toaster } from 'react-hot-toast';
 // Components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
+import BottomNav from './components/BottomNav';
 import AdminDashboard from './components/AdminDashboard';
 import SubAdminDashboard from './components/SubAdminDashboard';
 import AdminRoute from './components/AdminRoute';
@@ -54,7 +55,7 @@ function App() {
         <CategoryProvider>
           <div className="min-h-screen bg-gray-50">
             <Navbar />
-            <main className="flex-1">
+            <main className="flex-1 pb-16 md:pb-0">
               <Routes>
               {/* Public Routes */}
               <Route path="/" element={<Home />} />
@@ -160,6 +161,7 @@ function App() {
             </Routes>
           </main>
           <Footer />
+          <BottomNav />
 
           {/* Toast notifications */}
           <Toaster
