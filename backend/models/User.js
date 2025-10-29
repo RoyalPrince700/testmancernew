@@ -28,6 +28,44 @@ const quizHistorySchema = new mongoose.Schema({
   }
 });
 
+const assessmentResultSchema = new mongoose.Schema({
+  assessmentId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Assessment',
+    required: true
+  },
+  courseId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Course',
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['ca', 'exam'],
+    required: true
+  },
+  percentage: {
+    type: Number,
+    required: true,
+    min: 0,
+    max: 100
+  },
+  earnedMarks: {
+    type: Number,
+    required: true,
+    min: 0
+  },
+  totalMarks: {
+    type: Number,
+    required: true,
+    min: 1
+  },
+  attemptedAt: {
+    type: Date,
+    default: Date.now
+  }
+});
+
 const userSchema = new mongoose.Schema({
   googleId: {
     type: String,
@@ -163,6 +201,7 @@ const userSchema = new mongoose.Schema({
     }]
   }],
   quizHistory: [quizHistorySchema],
+  assessmentResults: [assessmentResultSchema],
   createdAt: {
     type: Date,
     default: Date.now

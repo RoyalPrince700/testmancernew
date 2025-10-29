@@ -139,8 +139,7 @@ export const uploadAudioFile = async (req, res) => {
               resource_type: 'video', // Cloudinary treats audio as video
               folder: 'testmancer/audio',
               format: 'mp3', // Force MP3 format for consistency
-              type: 'upload',
-              access_mode: 'public',
+              type: 'upload', // Public upload (app handles authentication)
               public_id: `audio_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
             },
             (error, result) => {
@@ -230,8 +229,7 @@ export const uploadVideoFile = async (req, res) => {
               resource_type: 'video',
               folder: 'testmancer/video',
               format: 'mp4', // Force MP4 format for consistency
-              type: 'upload',
-              access_mode: 'public',
+              type: 'upload', // Public upload (app handles authentication)
               public_id: `video_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
             },
             (error, result) => {
@@ -320,8 +318,7 @@ export const uploadPdfFile = async (req, res) => {
             {
               resource_type: 'raw', // PDFs are raw files
               folder: 'testmancer/resources/pdf',
-              type: 'authenticated', // Use authenticated type for better control
-              access_control: [{ access_type: 'anonymous' }], // Allow anonymous access
+              type: 'upload', // Public upload (app handles authentication)
               public_id: `pdf_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
             },
             (error, result) => {
@@ -410,8 +407,7 @@ export const uploadDocumentFile = async (req, res) => {
             {
               resource_type: 'raw', // Documents are raw files
               folder: 'testmancer/resources/documents',
-              type: 'authenticated', // Use authenticated type for better control
-              access_control: [{ access_type: 'anonymous' }], // Allow anonymous access
+              type: 'upload', // Public upload (app handles authentication)
               public_id: `doc_${Date.now()}_${Math.random().toString(36).substring(2, 15)}`
             },
             (error, result) => {

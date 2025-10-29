@@ -2,6 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCategory } from '../contexts/CategoryContext';
 import toast from 'react-hot-toast';
+import {
+  getGlobalLeaderboard,
+  getLeaderboardByGoal,
+  getWeeklyLeaderboard,
+  calculateUserStats,
+  getBadgesForUser
+} from '../utils/leaderboardApi';
 
 const Leaderboard = () => {
   const { user } = useAuth();
@@ -41,127 +48,78 @@ const Leaderboard = () => {
 
   const fetchLeaderboard = async () => {
     try {
-      // TODO: Replace with actual API calls
-      // Mock data for now
-      const mockLeaderboard = [
-        {
-          id: 1,
-          name: 'Alex Johnson',
-          avatar: '👨‍💻',
-          totalScore: 15420,
-          quizzesCompleted: 45,
-          averageScore: 92.5,
-          rank: 1,
-          badges: ['🏆', '⭐', '🔥']
-        },
-        {
-          id: 2,
-          name: 'Sarah Chen',
-          avatar: '👩‍💻',
-          totalScore: 14890,
-          quizzesCompleted: 42,
-          averageScore: 91.8,
-          rank: 2,
-          badges: ['⭐', '🔥']
-        },
-        {
-          id: 3,
-          name: 'Mike Rodriguez',
-          avatar: '👨‍🎓',
-          totalScore: 14230,
-          quizzesCompleted: 38,
-          averageScore: 90.2,
-          rank: 3,
-          badges: ['🔥']
-        },
-        {
-          id: 4,
-          name: 'Emma Wilson',
-          avatar: '👩‍🔬',
-          totalScore: 13850,
-          quizzesCompleted: 41,
-          averageScore: 89.7,
-          rank: 4,
-          badges: ['⭐']
-        },
-        {
-          id: 5,
-          name: 'David Kim',
-          avatar: '👨‍🏫',
-          totalScore: 13420,
-          quizzesCompleted: 35,
-          averageScore: 88.9,
-          rank: 5,
-          badges: []
-        },
-        {
-          id: 6,
-          name: 'Lisa Thompson',
-          avatar: '👩‍🎨',
-          totalScore: 12980,
-          quizzesCompleted: 37,
-          averageScore: 87.6,
-          rank: 6,
-          badges: []
-        },
-        {
-          id: 7,
-          name: 'James Lee',
-          avatar: '👨‍🚀',
-          totalScore: 12640,
-          quizzesCompleted: 33,
-          averageScore: 86.4,
-          rank: 7,
-          badges: []
-        },
-        {
-          id: 8,
-          name: 'Anna Martinez',
-          avatar: '👩‍⚕️',
-          totalScore: 12350,
-          quizzesCompleted: 36,
-          averageScore: 85.8,
-          rank: 8,
-          badges: []
-        },
-        {
-          id: 9,
-          name: 'Robert Taylor',
-          avatar: '👨‍🔧',
-          totalScore: 12090,
-          quizzesCompleted: 31,
-          averageScore: 84.7,
-          rank: 9,
-          badges: []
-        },
-        {
-          id: 10,
-          name: 'Maria Garcia',
-          avatar: '👩‍🌾',
-          totalScore: 11820,
-          quizzesCompleted: 34,
-          averageScore: 83.9,
-          rank: 10,
-          badges: []
+      let leaderboardData;
+      let userRankData = null;
+
+      // Fetch leaderboard based on category and timeframe
+      if (category === 'all') {
+        if (timeframe === 'weekly') {
+          leaderboardData = await getWeeklyLeaderboard();
+        } else {
+          // For all-time, monthly, daily - use global leaderboard
+          // Note: Backend doesn't currently support monthly/daily filtering
+          leaderboardData = await getGlobalLeaderboard(50, 1);
         }
-      ];
+      } else {
+        // Category-specific leaderboard
+        leaderboardData = await getLeaderboardByGoal(category);
+      }
 
-      // Simulate current user ranking
-      const currentUserRank = {
-        id: user?.id || 15,
-        name: user?.name || 'You',
-        avatar: '🎯',
-        totalScore: 8750,
-        quizzesCompleted: 28,
-        averageScore: 82.3,
-        rank: 15,
-        badges: []
-      };
+      // Process leaderboard data
+      const processedLeaderboard = leaderboardData.leaderboard.map((entry) => {
+        // For weekly leaderboard, calculate average score from weekly data
+        let averageScore = 0;
+        if (timeframe === 'weekly' && entry.weeklyCorrectAnswers && entry.weeklyQuizzes) {
+          // Estimate average score based on weekly performance
+          const totalQuestions = entry.weeklyQuizzes * 10; // Assume 10 questions per quiz
+          averageScore = totalQuestions > 0 ? Math.round((entry.weeklyCorrectAnswers / totalQuestions) * 100) : 0;
+        } else {
+          // For other timeframes, use a default or estimated score
+          // Since backend doesn't provide detailed quiz history in leaderboard,
+          // we'll use gems as a proxy for performance
+          averageScore = Math.min(100, Math.max(50, 70 + (entry.gems / 100))); // Rough estimation
+        }
 
-      setLeaderboard(mockLeaderboard);
-      setUserRank(currentUserRank);
+        return {
+          id: entry.userId || entry.user?._id,
+          name: entry.username || entry.name || entry.user?.name || 'Anonymous',
+          username: entry.username ? String(entry.username).toLowerCase() : null,
+          avatar: entry.avatar || entry.user?.avatar || '👤',
+          totalScore: entry.gems || 0,
+          quizzesCompleted: entry.totalQuizzes || entry.weeklyQuizzes || entry.completedModules || 0,
+          averageScore: averageScore,
+          rank: entry.rank,
+          badges: getBadgesForUser(entry, { averageScore, quizzesCompleted: entry.totalQuizzes || 0 }),
+          learningCategories: entry.learningCategories || []
+        };
+      });
+
+      // Process current user data
+      if (leaderboardData.currentUser) {
+        // Calculate user's actual stats if available
+        const userStats = user ? calculateUserStats(user.quizHistory || []) : { quizzesCompleted: 0, averageScore: 0 };
+
+        userRankData = {
+          id: user?.id || leaderboardData.currentUser.userId,
+          name: user?.username || user?.name || leaderboardData.currentUser.name,
+          username: user?.username ? user.username.toLowerCase() : null,
+          avatar: user?.avatar || '🎯',
+          totalScore: leaderboardData.currentUser.gems || 0,
+          quizzesCompleted: userStats.quizzesCompleted,
+          averageScore: userStats.averageScore,
+          rank: leaderboardData.currentUser.rank,
+          badges: getBadgesForUser(leaderboardData.currentUser, userStats)
+        };
+      }
+
+      setLeaderboard(processedLeaderboard);
+      setUserRank(userRankData);
     } catch (error) {
+      console.error('Failed to load leaderboard:', error);
       toast.error('Failed to load leaderboard');
+      // Fallback to empty data
+      setLeaderboard([]);
+      setUserRank(null);
     } finally {
       setLoading(false);
     }
@@ -183,6 +141,12 @@ const Leaderboard = () => {
       case 3: return 'text-amber-600';
       default: return 'text-gray-600';
     }
+  };
+
+  const formatUsername = (username) => {
+    if (!username) return '';
+    const s = String(username);
+    return s.charAt(0).toUpperCase() + s.slice(1);
   };
 
   if (loading) {
@@ -235,13 +199,12 @@ const Leaderboard = () => {
       {userRank && (
         <div className="card mb-8 border-2 border-blue-200 bg-blue-50">
           <div className="flex items-center justify-between">
-            <div className="flex items-center">
-              <div className="text-3xl mr-4">{userRank.avatar}</div>
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">{userRank.name}</h3>
-                <p className="text-gray-600">Your current ranking</p>
-              </div>
+          <div className="flex items-center">
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{userRank.username ? formatUsername(userRank.username) : userRank.name}</h3>
+              <p className="text-gray-600">Your current ranking</p>
             </div>
+          </div>
             <div className="text-right">
               <div className={`text-2xl font-bold ${getRankColor(userRank.rank)}`}>
                 {getRankIcon(userRank.rank)}
@@ -290,9 +253,8 @@ const Leaderboard = () => {
                   </td>
                   <td className="py-4 px-4">
                     <div className="flex items-center">
-                      <div className="text-2xl mr-3">{entry.avatar}</div>
                       <div>
-                        <div className="font-medium text-gray-900">{entry.name}</div>
+                        <div className="font-medium text-gray-900">{entry.username ? formatUsername(entry.username) : entry.name}</div>
                         {entry.rank <= 3 && (
                           <div className="text-sm text-gray-500">
                             {entry.rank === 1 ? 'Champion' : entry.rank === 2 ? 'Runner-up' : 'Third Place'}

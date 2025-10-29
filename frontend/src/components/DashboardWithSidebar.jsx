@@ -17,13 +17,13 @@ import {
 // Import dashboard components
 import {
   DashboardOverview,
-  RecentQuizzes,
+  RecentAssessments,
   PersonalizedCourses,
-  QuickActions,
-  Resources
+  Resources,
+  Results
 } from './dashboard';
 
-const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => {
+const DashboardWithSidebar = ({ stats, recentAssessments, personalizedCourses }) => {
   const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeTab, setActiveTab] = useState('overview');
@@ -51,8 +51,7 @@ const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => 
     { name: 'Overview', href: 'overview', icon: MdHome },
     { name: 'My Courses', href: 'courses', icon: MdMenuBook },
     { name: 'Resources', href: 'resources', icon: MdLibraryBooks },
-    { name: 'Recent Activity', href: 'activity', icon: MdLeaderboard },
-    { name: 'Quick Actions', href: 'actions', icon: MdPerson },
+    { name: 'CA/Exam', href: 'activity', icon: MdAssessment },
     { name: 'Results', href: 'results', icon: MdAssessment },
     { name: 'Settings', href: 'settings', icon: MdSettings },
     { name: 'Help', href: 'help', icon: MdHelp },
@@ -101,7 +100,7 @@ const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => 
       )}
 
       {/* Fixed Sidebar */}
-      <div className={`fixed top-16 left-0 h-[calc(100vh-4rem)] ${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-sm transition-all duration-300 ease-in-out border-r border-gray-200 z-40 group
+      <div className={`fixed top-16 left-0 ${isMobile ? 'h-[calc(100vh-8rem)]' : 'h-[calc(100vh-4rem)]'} ${sidebarOpen ? 'w-64' : 'w-16'} bg-white shadow-sm transition-all duration-300 ease-in-out border-r border-gray-200 z-40 group
         ${isMobile ? (sidebarOpen ? 'translate-x-0' : '-translate-x-full') : ''}`}>
         {/* Collapsible Arrow - positioned at middle edge */}
         {!isMobile && (
@@ -188,14 +187,8 @@ const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => 
               />
             )}
             {activeTab === 'resources' && <Resources />}
-            {activeTab === 'activity' && <RecentQuizzes recentQuizzes={recentQuizzes} />}
-            {activeTab === 'actions' && <QuickActions />}
-            {activeTab === 'results' && (
-              <div className="card">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Results</h2>
-                <p className="text-gray-600">Results component coming soon...</p>
-              </div>
-            )}
+            {activeTab === 'activity' && <RecentAssessments />}
+            {activeTab === 'results' && <Results />}
             {activeTab === 'settings' && (
               <div className="card">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Settings</h2>

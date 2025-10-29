@@ -568,7 +568,7 @@ const Onboarding = () => {
         />
 
         {/* Step Content */}
-        <div className="bg-white rounded-lg shadow-md p-8">
+        <div className="bg-white rounded-lg shadow-md p-8 relative min-h-[400px]">
           {/* Avatar Step - Only show if no Google avatar */}
           {step === 1 && !hasGoogleAvatar && (
             <AvatarSelection
@@ -659,6 +659,7 @@ const Onboarding = () => {
           prevStep={prevStep}
           nextStep={nextStep}
           handleComplete={handleComplete}
+          hasLongContent={step === (hasGoogleAvatar ? 2 : 3)} // Learning categories step has long content
         />
       </div>
     </div>

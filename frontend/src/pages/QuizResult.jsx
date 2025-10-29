@@ -11,14 +11,35 @@ const QuizResult = () => {
   const [showExplanations, setShowExplanations] = useState({});
 
   useEffect(() => {
-    // Check if we have state from navigation, otherwise fetch from API
+    // Prefer server-verified values; use navigation state for UX, then reconcile
     if (location.state) {
       setResult(location.state);
       setLoading(false);
+      verifyAgainstHistory(location.state);
     } else {
       fetchQuizResult();
     }
   }, [quizId, location.state]);
+
+  const verifyAgainstHistory = async (localState) => {
+    try {
+      const historyResponse = await axios.get('/api/quizzes/history/user');
+      const quizHistory = historyResponse.data.quizHistory.find(
+        h => h.quizId.toString() === quizId
+      );
+      if (quizHistory) {
+        setResult(prev => ({
+          ...(prev || localState),
+          score: quizHistory.score,
+          correctAnswers: quizHistory.correctAnswers,
+          totalQuestions: quizHistory.totalQuestions,
+          completedAt: quizHistory.completedAt
+        }));
+      }
+    } catch (err) {
+      // best-effort verification; ignore errors
+    }
+  };
 
   const fetchQuizResult = async () => {
     try {
@@ -182,16 +203,17 @@ const QuizResult = () => {
       </div>
 
       {/* Questions Review */}
-      <div className="card mb-8">
-        <h3 className="text-xl font-semibold text-gray-900 mb-6">Question Review</h3>
-        <div className="space-y-6">
-          {result.quiz.questions.map((question, index) => {
-            const questionResult = result.questionResults ? result.questionResults[index] : null;
-            const userAnswer = result.selectedAnswers ? result.selectedAnswers[question.id] : (questionResult ? questionResult.userAnswer : -1);
-            const isCorrect = questionResult ? questionResult.isCorrect : (userAnswer === question.correctAnswer);
+      {Array.isArray(result.questionResults) && result.questionResults.length > 0 && (
+        <div className="card mb-8">
+          <h3 className="text-xl font-semibold text-gray-900 mb-6">Question Review</h3>
+          <div className="space-y-6">
+            {result.quiz.questions.map((question, index) => {
+              const questionResult = result.questionResults ? result.questionResults[index] : null;
+              const userAnswer = result.selectedAnswers ? result.selectedAnswers[question.id] : (questionResult ? questionResult.userAnswer : -1);
+              const isCorrect = questionResult ? questionResult.isCorrect : false;
 
-            return (
-              <div key={question.id} className="border border-gray-200 rounded-lg p-6">
+              return (
+                <div key={question.id} className="border border-gray-200 rounded-lg p-6">
                 <div className="flex items-start justify-between mb-4">
                   <h4 className="font-medium text-gray-900">
                     Question {index + 1}: {question.question}
@@ -219,50 +241,37 @@ const QuizResult = () => {
 
                 <div className="space-y-2 mb-4">
                   {question.options.map((option, optionIndex) => {
+                    const isUser = optionIndex === userAnswer && !isCorrect;
+                    const isAnswer = questionResult ? optionIndex === questionResult.correctAnswer : false;
                     let optionClass = 'flex items-center p-3 border rounded-lg ';
-
-                    if (optionIndex === question.correctAnswer) {
-                      optionClass += 'border-green-500 bg-green-50';
-                    } else if (optionIndex === userAnswer && !isCorrect) {
-                      optionClass += 'border-red-500 bg-red-50';
-                    } else {
-                      optionClass += 'border-gray-200';
-                    }
+                    if (isAnswer) optionClass += 'border-green-500 bg-green-50';
+                    else if (isUser) optionClass += 'border-red-500 bg-red-50';
+                    else optionClass += 'border-gray-200';
 
                     return (
                       <div key={optionIndex} className={optionClass}>
                         <div className="flex items-center">
                           <div className={`w-4 h-4 rounded-full mr-3 flex items-center justify-center ${
-                            optionIndex === question.correctAnswer
-                              ? 'bg-green-500'
-                              : optionIndex === userAnswer && !isCorrect
-                              ? 'bg-red-500'
-                              : 'border-2 border-gray-300'
+                            isAnswer ? 'bg-green-500' : isUser ? 'bg-red-500' : 'border-2 border-gray-300'
                           }`}>
-                            {optionIndex === question.correctAnswer && (
+                            {isAnswer && (
                               <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                               </svg>
                             )}
-                            {optionIndex === userAnswer && !isCorrect && (
+                            {isUser && (
                               <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
                               </svg>
                             )}
                           </div>
-                          <span className={
-                            optionIndex === question.correctAnswer
-                              ? 'text-green-800 font-medium'
-                              : optionIndex === userAnswer && !isCorrect
-                              ? 'text-red-800'
-                              : 'text-gray-700'
-                          }>
+                          <span className={isAnswer ? 'text-green-800 font-medium' : isUser ? 'text-red-800' : 'text-gray-700'}>
                             {option}
                           </span>
-                          {optionIndex === question.correctAnswer && (
+                          {isAnswer && (
                             <span className="ml-auto text-green-600 text-sm font-medium">✓ Correct Answer</span>
                           )}
-                          {optionIndex === userAnswer && !isCorrect && (
+                          {isUser && (
                             <span className="ml-auto text-red-600 text-sm font-medium">✗ Your Answer</span>
                           )}
                         </div>
@@ -278,17 +287,18 @@ const QuizResult = () => {
                   {showExplanations[question.id] ? 'Hide' : 'Show'} Explanation
                 </button>
 
-                {showExplanations[question.id] && (
+                {showExplanations[question.id] && questionResult && (
                   <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                     <h5 className="font-medium text-blue-900 mb-2">Explanation:</h5>
-                    <p className="text-blue-800">{question.explanation}</p>
+                    <p className="text-blue-800">{questionResult.explanation}</p>
                   </div>
                 )}
               </div>
             );
-          })}
+            })}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-4 justify-center">

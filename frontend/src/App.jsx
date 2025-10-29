@@ -1,5 +1,18 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+
+// Conditional Bottom Navigation Component
+const ConditionalBottomNav = () => {
+  const location = useLocation();
+  const isSubAdminRoute = location.pathname.startsWith('/subadmin');
+
+  // Don't show BottomNav on subadmin routes since SubAdminBottomNav is used there
+  if (isSubAdminRoute) {
+    return null;
+  }
+
+  return <BottomNav />;
+};
 import { AuthProvider } from './contexts/AuthContext';
 import { CategoryProvider } from './contexts/CategoryContext';
 import { Toaster } from 'react-hot-toast';
@@ -22,6 +35,7 @@ import Courses from './pages/Courses';
 import CourseDetail from './pages/CourseDetail';
 import Quiz from './pages/Quiz';
 import QuizResult from './pages/QuizResult';
+import Assessment from './pages/Assessment';
 import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
 import Onboarding from './pages/Onboarding';
@@ -91,6 +105,11 @@ function App() {
               <Route path="/quiz/:quizId" element={
                 <ProtectedRoute>
                   <Quiz />
+                </ProtectedRoute>
+              } />
+              <Route path="/assessment/:assessmentId" element={
+                <ProtectedRoute>
+                  <Assessment />
                 </ProtectedRoute>
               } />
 
@@ -168,7 +187,7 @@ function App() {
             </Routes>
           </main>
           <Footer />
-          <BottomNav />
+          <ConditionalBottomNav />
 
           {/* Toast notifications */}
           <Toaster

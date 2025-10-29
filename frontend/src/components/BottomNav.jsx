@@ -25,7 +25,7 @@ const BottomNav = () => {
           <NavLink
             to="/dashboard?tab=overview"
             className={`flex flex-col items-center gap-0.5 text-[11px] px-2 text-gray-600 pb-1 ${
-              overviewActive ? 'border-b-2 border-blue-600' : ''
+              pathname === '/dashboard' && currentTab === 'overview' ? 'border-b-2 border-blue-600' : ''
             }`}
           >
             <FaHome className="w-5 h-5" />
@@ -36,7 +36,7 @@ const BottomNav = () => {
           <NavLink
             to="/dashboard?tab=courses"
             className={`flex flex-col items-center gap-0.5 text-[11px] px-2 text-gray-600 pb-1 ${
-              coursesActive ? 'border-b-2 border-blue-600' : ''
+              pathname === '/dashboard' && currentTab === 'courses' ? 'border-b-2 border-blue-600' : ''
             }`}
           >
             <FaBook className="w-5 h-5" />
@@ -47,7 +47,7 @@ const BottomNav = () => {
           <NavLink
             to="/dashboard?tab=results"
             className={`flex flex-col items-center gap-0.5 text-[11px] px-2 text-gray-600 pb-1 ${
-              resultsActive ? 'border-b-2 border-blue-600' : ''
+              pathname === '/dashboard' && currentTab === 'results' ? 'border-b-2 border-blue-600' : ''
             }`}
           >
             <FaChartBar className="w-5 h-5" />
@@ -58,7 +58,7 @@ const BottomNav = () => {
           <NavLink
             to="/leaderboard"
             className={`flex flex-col items-center gap-0.5 text-[11px] px-2 text-gray-600 pb-1 ${
-              rankActive ? 'border-b-2 border-blue-600' : ''
+              pathname.startsWith('/leaderboard') ? 'border-b-2 border-blue-600' : ''
             }`}
           >
             <FaTrophy className="w-5 h-5" />

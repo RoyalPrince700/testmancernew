@@ -18,7 +18,7 @@ const Dashboard = () => {
     completedModules: 0,
     learningCategories: []
   });
-  const [recentQuizzes, setRecentQuizzes] = useState([]);
+  const [recentAssessments, setRecentAssessments] = useState([]);
   const [personalizedCourses, setPersonalizedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -36,7 +36,7 @@ const Dashboard = () => {
       const statsResponse = await axios.get('/api/users/stats');
       if (statsResponse.data.stats) {
         setStats(statsResponse.data.stats);
-        setRecentQuizzes(statsResponse.data.stats.recentQuizzes || []);
+        setRecentAssessments(statsResponse.data.stats.recentAssessments || []);
       }
 
       // Fetch personalized courses
@@ -67,7 +67,7 @@ const Dashboard = () => {
   return (
     <DashboardWithSidebar
       stats={stats}
-      recentQuizzes={recentQuizzes}
+      recentAssessments={recentAssessments}
       personalizedCourses={personalizedCourses}
     />
   );

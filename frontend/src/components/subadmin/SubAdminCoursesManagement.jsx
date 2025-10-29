@@ -2,9 +2,8 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { MdAdd, MdEdit, MdDelete, MdSearch, MdFilterList, MdMenuBook, MdClose, MdSettings, MdQuiz, MdPublish, MdUnpublished, MdVisibility } from 'react-icons/md';
+import { MdAdd, MdEdit, MdDelete, MdSearch, MdFilterList, MdMenuBook, MdClose, MdSettings, MdPublish, MdUnpublished, MdVisibility } from 'react-icons/md';
 import MediaUpload from '../MediaUpload';
-import QuizBuilder from './QuizBuilder';
 
 const SubAdminCoursesManagement = () => {
   const { user, assignedUniversities, assignedFaculties, assignedDepartments, assignedLevels } = useAuth();
@@ -162,7 +161,7 @@ const SubAdminCoursesManagement = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Course Management</h1>
             <p className="text-gray-600 mt-1 text-sm">
@@ -171,7 +170,7 @@ const SubAdminCoursesManagement = () => {
           </div>
           <button
             onClick={() => setShowCreateForm(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center text-sm"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center text-sm w-full md:w-auto"
           >
             <MdAdd className="w-5 h-5 mr-2" />
             Create Course
@@ -372,76 +371,129 @@ const SubAdminCoursesManagement = () => {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                    Course
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                    Audience
-                  </th>
-                  <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredCourses.map((course) => (
-                  <tr key={course._id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{course.title}</div>
-                        <div className="text-xs text-gray-500 line-clamp-2">{course.description}</div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <div className="text-xs">
-                        {course.audience?.universities?.length > 0 && (
-                          <div>{course.audience.universities.length} universities</div>
-                        )}
-                        {course.audience?.faculties?.length > 0 && (
-                          <div>{course.audience.faculties.length} faculties</div>
-                        )}
-                        {course.audience?.levels?.length > 0 && (
-                          <div>{course.audience.levels.length} levels</div>
-                        )}
-                        {!course.audience?.universities?.length &&
-                         !course.audience?.faculties?.length &&
-                         !course.audience?.levels?.length && (
-                          <div>All students</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                        Active
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button
-                        onClick={() => setSelectedCourse(course)}
-                        className="text-green-600 hover:text-green-900 mr-3"
-                        title="Manage Units & Pages"
-                      >
-                        <MdMenuBook className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteCourse(course._id)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <MdDelete className="w-4 h-4" />
-                      </button>
-                    </td>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                      Course
+                    </th>
+                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                      Audience
+                    </th>
+                    <th className="px-6 py-3 text-left text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-[11px] font-semibold text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {filteredCourses.map((course) => (
+                    <tr key={course._id} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{course.title}</div>
+                          <div className="text-xs text-gray-500 line-clamp-2">{course.description}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                        <div className="text-xs">
+                          {course.audience?.universities?.length > 0 && (
+                            <div>{course.audience.universities.length} universities</div>
+                          )}
+                          {course.audience?.faculties?.length > 0 && (
+                            <div>{course.audience.faculties.length} faculties</div>
+                          )}
+                          {course.audience?.levels?.length > 0 && (
+                            <div>{course.audience.levels.length} levels</div>
+                          )}
+                          {!course.audience?.universities?.length &&
+                           !course.audience?.faculties?.length &&
+                           !course.audience?.levels?.length && (
+                            <div>All students</div>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                          Active
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button
+                          onClick={() => setSelectedCourse(course)}
+                          className="text-green-600 hover:text-green-900 mr-3"
+                          title="Manage Units & Pages"
+                        >
+                          <MdMenuBook className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteCourse(course._id)}
+                          className="text-red-600 hover:text-red-900"
+                        >
+                          <MdDelete className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="md:hidden space-y-4">
+              {filteredCourses.map((course) => (
+                <div key={course._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">{course.title}</h3>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
+                    </div>
+                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2 flex-shrink-0">
+                      Active
+                    </span>
+                  </div>
+
+                  <div className="text-xs text-gray-500 mb-3">
+                    {course.audience?.universities?.length > 0 && (
+                      <div>{course.audience.universities.length} universities</div>
+                    )}
+                    {course.audience?.faculties?.length > 0 && (
+                      <div>{course.audience.faculties.length} faculties</div>
+                    )}
+                    {course.audience?.levels?.length > 0 && (
+                      <div>{course.audience.levels.length} levels</div>
+                    )}
+                    {!course.audience?.universities?.length &&
+                     !course.audience?.faculties?.length &&
+                     !course.audience?.levels?.length && (
+                      <div>All students</div>
+                    )}
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setSelectedCourse(course)}
+                      className="flex-1 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-xs font-medium flex items-center justify-center"
+                    >
+                      <MdMenuBook className="w-3 h-3 mr-1" />
+                      Manage
+                    </button>
+                    <button
+                      onClick={() => handleDeleteCourse(course._id)}
+                      className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-xs font-medium flex items-center justify-center"
+                    >
+                      <MdDelete className="w-3 h-3" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
     </div>
@@ -455,10 +507,6 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
   const [showUnitForm, setShowUnitForm] = useState(false);
   const [showPageForm, setShowPageForm] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [showQuizBuilder, setShowQuizBuilder] = useState(false);
-  const [quizBuilderConfig, setQuizBuilderConfig] = useState(null);
-  const [unitQuizzes, setUnitQuizzes] = useState({});
-  const [pageQuizzes, setPageQuizzes] = useState({});
   const [showPagePreview, setShowPagePreview] = useState(false);
   const [previewPage, setPreviewPage] = useState(null);
   const [unitForm, setUnitForm] = useState({
@@ -491,7 +539,6 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
 
   useEffect(() => {
     loadUnits();
-    loadQuizzes();
   }, [course._id]);
 
   const loadUnits = async () => {
@@ -596,63 +643,6 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
     }
   };
 
-  const loadQuizzes = async () => {
-    try {
-      const response = await axios.get(`/api/quizzes/course/${course._id}/detailed`);
-      const { unitQuizzes: uQuizzes, pageQuizzes: pQuizzes } = response.data;
-
-      // Organize quizzes by unitId and page key
-      const unitQuizMap = {};
-      const pageQuizMap = {};
-
-      uQuizzes.forEach(quiz => {
-        if (quiz.moduleId) {
-          unitQuizMap[quiz.moduleId] = quiz;
-        }
-      });
-
-      pQuizzes.forEach(quiz => {
-        const key = `${quiz.moduleId}-${quiz.pageOrder}`;
-        pageQuizMap[key] = quiz;
-      });
-
-      setUnitQuizzes(unitQuizMap);
-      setPageQuizzes(pageQuizMap);
-    } catch (error) {
-      console.error('Failed to load quizzes:', error);
-      // Don't show error toast as this might fail on courses without quizzes
-    }
-  };
-
-  const openQuizBuilder = (trigger, moduleId, pageOrder, existingQuiz = null) => {
-    setQuizBuilderConfig({
-      trigger,
-      moduleId,
-      pageOrder,
-      existingQuiz
-    });
-    setShowQuizBuilder(true);
-  };
-
-  const handleQuizSave = (savedQuiz) => {
-    loadQuizzes(); // Reload quizzes to reflect changes
-    toast.success(`Quiz ${savedQuiz._id ? 'updated' : 'created'} successfully!`);
-  };
-
-  const handleDeleteQuiz = async (quizId) => {
-    if (!window.confirm('Are you sure you want to delete this quiz? This action cannot be undone.')) {
-      return;
-    }
-
-    try {
-      await axios.delete(`/api/quizzes/admin/quizzes/${quizId}`);
-      toast.success('Quiz deleted successfully');
-      loadQuizzes(); // Reload to remove the deleted quiz
-    } catch (error) {
-      console.error('Failed to delete quiz:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete quiz');
-    }
-  };
 
   const handlePreviewPage = (page, unit) => {
     setPreviewPage({ ...page, unitTitle: unit.title });
@@ -742,7 +732,7 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Managing: {course.title}</h1>
             <p className="text-gray-600 mt-1">
@@ -751,7 +741,7 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
           </div>
           <button
             onClick={onBack}
-            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors"
+            className="bg-gray-600 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors w-full md:w-auto"
           >
             Back to Courses
           </button>
@@ -760,14 +750,14 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
 
       {/* Add Unit Button */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <h2 className="text-lg font-semibold text-gray-900">{unitLabel}s</h2>
             <p className="text-gray-600 text-sm">Create and manage {unitLabel.toLowerCase()}s for this course</p>
           </div>
           <button
             onClick={() => setShowUnitForm(!showUnitForm)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center w-full md:w-auto"
           >
             <MdAdd className="w-5 h-5 mr-2" />
             {showUnitForm ? 'Cancel' : `Add ${unitLabel}`}
@@ -869,7 +859,7 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
           units.map(unit => (
             <div key={unit._id} className="bg-white rounded-lg shadow-sm border border-gray-200">
               <div className="p-6">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
                   <div className="flex-1">
                     <h3 className="text-lg font-semibold text-gray-900">{unit.title}</h3>
                     <p className="text-gray-600 mt-1">{unit.description}</p>
@@ -885,28 +875,6 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
                         {unit.isPublished ? 'Published' : 'Draft'}
                       </span>
                     </div>
-                    {unitQuizzes[unit._id] && (
-                      <div className="mt-2 text-sm text-purple-600 bg-purple-50 px-3 py-1 rounded inline-flex items-center">
-                        <MdQuiz className="w-4 h-4 mr-1" />
-                        {unitLabel} Quiz: {unitQuizzes[unit._id].title} ({unitQuizzes[unit._id].questions?.length || 0} questions)
-                        <div className="ml-2 flex gap-1">
-                          <button
-                            onClick={() => openQuizBuilder('unit', unit._id, null, unitQuizzes[unit._id])}
-                            className="text-blue-600 hover:text-blue-800"
-                            title="Edit Quiz"
-                          >
-                            <MdEdit className="w-3 h-3" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteQuiz(unitQuizzes[unit._id]._id)}
-                            className="text-red-600 hover:text-red-800"
-                            title="Delete Quiz"
-                          >
-                            <MdDelete className="w-3 h-3" />
-                          </button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                   <div className="flex gap-2">
                     <button
@@ -914,43 +882,38 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
                         setSelectedUnit(selectedUnit === unit._id ? null : unit._id);
                         setShowPageForm(false);
                       }}
-                      className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm"
+                      className="bg-blue-600 text-white px-2 py-2 rounded-lg hover:bg-blue-700 transition-colors text-sm flex items-center justify-center flex-shrink-0"
                     >
-                      {selectedUnit === unit._id ? 'Hide Pages' : 'Manage Pages'}
-                    </button>
-                    <button
-                      onClick={() => openQuizBuilder('unit', unit._id)}
-                      className="bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition-colors text-sm flex items-center"
-                      title={`Add Quiz for this ${unitLabel}`}
-                    >
-                      <MdQuiz className="w-4 h-4 mr-1" />
-                      Add Quiz
+                      <MdSettings className="w-4 h-4 mr-1 md:mr-2" />
+                      <span className="hidden md:inline">{selectedUnit === unit._id ? 'Hide Pages' : 'Manage Pages'}</span>
+                      <span className="md:hidden">Pages</span>
                     </button>
                     {unit.isPublished ? (
                       <button
                         onClick={() => handleUnpublishUnit(unit._id)}
-                        className="bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm flex items-center"
+                        className="bg-orange-600 text-white px-2 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm flex items-center justify-center flex-shrink-0"
                         title="Unpublish this unit"
                       >
-                        <MdUnpublished className="w-4 h-4 mr-1" />
-                        Unpublish
+                        <MdUnpublished className="w-4 h-4" />
+                        <span className="hidden md:inline ml-1">Unpublish</span>
                       </button>
                     ) : (
                       <button
                         onClick={() => handlePublishUnit(unit._id)}
-                        className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center"
+                        className="bg-green-600 text-white px-2 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center justify-center flex-shrink-0"
                         title="Publish this unit to make it visible to users"
                         disabled={!unit.pages || unit.pages.length === 0}
                       >
-                        <MdPublish className="w-4 h-4 mr-1" />
-                        Publish
+                        <MdPublish className="w-4 h-4" />
+                        <span className="hidden md:inline ml-1">Publish</span>
                       </button>
                     )}
                     <button
                       onClick={() => handleDeleteUnit(unit._id)}
-                      className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
+                      className="bg-red-600 text-white px-2 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm flex items-center justify-center flex-shrink-0"
                     >
-                      Delete
+                      <MdDelete className="w-4 h-4" />
+                      <span className="hidden md:inline ml-1">Delete</span>
                     </button>
                   </div>
                 </div>
@@ -1060,80 +1023,41 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
                       {unit.pages?.length === 0 ? (
                         <p className="text-gray-500 text-sm italic">No pages yet</p>
                       ) : (
-                        unit.pages?.map(page => {
-                          const pageKey = `${unit._id}-${page.order}`;
-                          const pageQuiz = pageQuizzes[pageKey];
-
-                          return (
-                            <div key={page._id} className="bg-gray-50 p-3 rounded border">
-                              <div className="flex justify-between items-start">
-                                <div className="flex-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="font-medium text-sm">{page.title}</span>
-                                    <span className="text-gray-500 text-xs">(Order: {page.order})</span>
-                                    {page.audioUrl && <span className="text-green-600 text-xs">🎵 Audio</span>}
-                                    {page.videoUrl && <span className="text-blue-600 text-xs">🎬 Video</span>}
-                                  </div>
-                                  {pageQuiz && (
-                                    <div className="text-xs text-purple-600 bg-purple-50 px-2 py-1 rounded mt-1 inline-flex items-center">
-                                      <MdQuiz className="w-3 h-3 mr-1" />
-                                      Quiz: {pageQuiz.title} ({pageQuiz.questions?.length || 0} questions)
-                                    </div>
-                                  )}
-                                </div>
-                                <div className="flex gap-2 ml-4">
-                                  <button
-                                    onClick={() => handlePreviewPage(page, unit)}
-                                    className="text-blue-600 hover:text-blue-800 text-sm px-2 py-1 border border-blue-200 rounded hover:bg-blue-50"
-                                    title="Preview Page"
-                                  >
-                                    <MdVisibility className="w-4 h-4" />
-                                  </button>
-                                  <button
-                                    onClick={() => handleEditPage(page)}
-                                    className="text-green-600 hover:text-green-800 text-sm px-2 py-1 border border-green-200 rounded hover:bg-green-50"
-                                    title="Edit Page"
-                                  >
-                                    <MdEdit className="w-4 h-4" />
-                                  </button>
-                                  {!pageQuiz ? (
-                                    <button
-                                      onClick={() => openQuizBuilder('page', unit._id, page.order)}
-                                      className="text-purple-600 hover:text-purple-800 text-sm px-2 py-1 border border-purple-200 rounded hover:bg-purple-50"
-                                      title="Add Quiz for this Page"
-                                    >
-                                      <MdQuiz className="w-4 h-4" />
-                                    </button>
-                                  ) : (
-                                    <div className="flex gap-1">
-                                      <button
-                                        onClick={() => openQuizBuilder('page', unit._id, page.order, pageQuiz)}
-                                        className="text-blue-600 hover:text-blue-800 text-sm px-2 py-1"
-                                        title="Edit Quiz"
-                                      >
-                                        <MdEdit className="w-4 h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDeleteQuiz(pageQuiz._id)}
-                                        className="text-red-600 hover:text-red-800 text-sm px-2 py-1"
-                                        title="Delete Quiz"
-                                      >
-                                        <MdDelete className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  )}
-                                  <button
-                                    onClick={() => handleDeletePage(page._id)}
-                                    className="text-red-600 hover:text-red-800 text-sm px-2 py-1"
-                                    title="Delete Page"
-                                  >
-                                    <MdDelete className="w-4 h-4" />
-                                  </button>
-                                </div>
+                        unit.pages?.map(page => (
+                          <div key={page._id} className="bg-gray-50 p-3 rounded border">
+                            <div className="flex flex-col gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-medium text-sm">{page.title}</span>
+                                <span className="text-gray-500 text-xs">(Order: {page.order})</span>
+                                {page.audioUrl && <span className="text-green-600 text-xs">🎵 Audio</span>}
+                                {page.videoUrl && <span className="text-blue-600 text-xs">🎬 Video</span>}
+                              </div>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handlePreviewPage(page, unit)}
+                                  className="text-blue-600 hover:text-blue-800 text-sm px-2 py-1 border border-blue-200 rounded hover:bg-blue-50"
+                                  title="Preview Page"
+                                >
+                                  <MdVisibility className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleEditPage(page)}
+                                  className="text-green-600 hover:text-green-800 text-sm px-2 py-1 border border-green-200 rounded hover:bg-green-50"
+                                  title="Edit Page"
+                                >
+                                  <MdEdit className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleDeletePage(page._id)}
+                                  className="text-red-600 hover:text-red-800 text-sm px-2 py-1"
+                                  title="Delete Page"
+                                >
+                                  <MdDelete className="w-4 h-4" />
+                                </button>
                               </div>
                             </div>
-                          );
-                        })
+                          </div>
+                        ))
                       )}
                     </div>
                   </div>
@@ -1144,21 +1068,6 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
         )}
       </div>
 
-      {/* Quiz Builder Modal */}
-      {showQuizBuilder && quizBuilderConfig && (
-        <QuizBuilder
-          course={course}
-          trigger={quizBuilderConfig.trigger}
-          moduleId={quizBuilderConfig.moduleId}
-          pageOrder={quizBuilderConfig.pageOrder}
-          existingQuiz={quizBuilderConfig.existingQuiz}
-          onClose={() => {
-            setShowQuizBuilder(false);
-            setQuizBuilderConfig(null);
-          }}
-          onSave={handleQuizSave}
-        />
-      )}
 
       {/* Page Preview Modal */}
       {showPagePreview && previewPage && (

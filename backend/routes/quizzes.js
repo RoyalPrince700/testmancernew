@@ -60,7 +60,8 @@ const updateQuizSchema = Joi.object({
 });
 
 const submitQuizSchema = Joi.object({
-  answers: Joi.array().items(Joi.number().integer().min(0).max(3)).required()
+  // allow -1 for unanswered; treated as incorrect on server
+  answers: Joi.array().items(Joi.number().integer().min(-1).max(3)).required()
 });
 
 // Get all quizzes
@@ -83,6 +84,32 @@ router.get('/course/:courseId', authenticateToken, async (req, res) => {
   }
 });
 
+// helper to strip sensitive fields from questions
+function sanitizeQuizForStudent(quizDoc) {
+  if (!quizDoc) return null;
+  const q = quizDoc;
+  return {
+    _id: q._id,
+    title: q.title,
+    description: q.description,
+    courseId: q.courseId,
+    moduleId: q.moduleId,
+    trigger: q.trigger,
+    pageOrder: q.pageOrder,
+    timeLimit: q.timeLimit,
+    passingScore: q.passingScore,
+    difficulty: q.difficulty,
+    category: q.category,
+    totalQuestions: Array.isArray(q.questions) ? q.questions.length : 0,
+    questions: (q.questions || []).map(qq => ({
+      _id: qq._id,
+      question: qq.question,
+      options: qq.options
+      // intentionally omit correctAnswer and explanation before submission
+    }))
+  };
+}
+
 // Get quiz by ID
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
@@ -90,7 +117,8 @@ router.get('/:id', authenticateToken, async (req, res) => {
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found' });
     }
-    res.json({ quiz });
+    const sanitized = sanitizeQuizForStudent(quiz);
+    res.json({ quiz: sanitized });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -123,8 +151,8 @@ router.get('/page/:courseId/:moduleId/:pageOrder', authenticateToken, async (req
     if (!quiz) {
       return res.status(404).json({ message: 'Quiz not found for this page' });
     }
-
-    res.json({ quiz });
+    const sanitized = sanitizeQuizForStudent(quiz);
+    res.json({ quiz: sanitized });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error: error.message });
   }
@@ -177,6 +205,13 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
       return res.status(400).json({ message: 'Number of answers must match number of questions' });
     }
 
+    // Enforce max attempts
+    const user = await User.findById(userId);
+    const priorAttempts = (user.quizHistory || []).filter(h => h.quizId?.toString() === quizId.toString()).length;
+    if (typeof quiz.maxAttempts === 'number' && priorAttempts >= quiz.maxAttempts) {
+      return res.status(403).json({ message: 'Maximum attempts reached for this quiz' });
+    }
+
     // Calculate score
     let correctAnswers = 0;
     let gemsEarned = 0;
@@ -195,8 +230,6 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
     const score = Math.round((correctAnswers / quiz.questions.length) * 100);
 
     // Update user with first-attempt gem logic
-    const user = await User.findById(userId);
-
     // Track which questions earned gems this attempt (first-attempt only)
     const newlyEarnedQuestionIds = [];
 

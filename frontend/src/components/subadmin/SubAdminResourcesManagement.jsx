@@ -237,7 +237,7 @@ const [uploadData, setUploadData] = useState(null);
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Resource Management</h1>
             <p className="text-gray-600 mt-1 text-sm">
@@ -246,10 +246,11 @@ const [uploadData, setUploadData] = useState(null);
           </div>
           <button
             onClick={() => setShowCreateFolderForm(true)}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center text-sm"
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center text-sm w-full sm:w-auto"
           >
-            <MdAdd className="w-5 h-5 mr-2" />
-            Create Folder
+            <MdAdd className="w-4 h-4 mr-2" />
+            <span className="hidden xs:inline">Create Folder</span>
+            <span className="xs:hidden">New Folder</span>
           </button>
         </div>
       </div>
@@ -345,9 +346,9 @@ const [uploadData, setUploadData] = useState(null);
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Folders List */}
-        <div className="lg:col-span-1">
+        <div className="xl:col-span-1">
           <div className="bg-white rounded-lg shadow-soft border border-gray-100">
             <div className="p-4 border-b border-gray-200">
               <h3 className="text-lg font-semibold text-gray-900">Resource Folders</h3>
@@ -410,26 +411,29 @@ const [uploadData, setUploadData] = useState(null);
         </div>
 
         {/* Resources List */}
-        <div className="lg:col-span-2">
+        <div className="xl:col-span-2">
           <div className="bg-white rounded-lg shadow-soft border border-gray-100">
-            <div className="p-4 border-b border-gray-200 flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900">
-                  {selectedFolder ? `Resources in "${selectedFolder.title}"` : 'Select a folder'}
-                </h3>
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {selectedFolder ? `Resources in "${selectedFolder.title}"` : 'Select a folder'}
+                  </h3>
+                  {selectedFolder && (
+                    <p className="text-sm text-gray-600 mt-1">{resources.length} resources</p>
+                  )}
+                </div>
                 {selectedFolder && (
-                  <p className="text-sm text-gray-600 mt-1">{resources.length} resources</p>
+                  <button
+                    onClick={() => setShowCreateResourceForm(true)}
+                    className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center text-sm w-full sm:w-auto"
+                  >
+                    <MdAdd className="w-4 h-4 mr-2" />
+                    <span className="hidden xs:inline">Add Resource</span>
+                    <span className="xs:hidden">Add</span>
+                  </button>
                 )}
               </div>
-              {selectedFolder && (
-                <button
-                  onClick={() => setShowCreateResourceForm(true)}
-                  className="bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center text-sm"
-                >
-                  <MdAdd className="w-4 h-4 mr-1" />
-                  Add Resource
-                </button>
-              )}
             </div>
 
             {!selectedFolder ? (

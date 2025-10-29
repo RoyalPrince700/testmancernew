@@ -117,6 +117,11 @@ resourceSchema.virtual('formattedDuration').get(function() {
 
 // Method to check if resource is accessible by user
 resourceSchema.methods.isAccessibleBy = function(user) {
+  // Admins and subadmins can access all resources (they manage the system)
+  if (user?.role === 'admin' || user?.role === 'subadmin') {
+    return true;
+  }
+
   // If no audience restrictions, accessible to all
   const audience = this.audience || {};
   if (!audience.universities?.length && !audience.faculties?.length &&
@@ -124,20 +129,23 @@ resourceSchema.methods.isAccessibleBy = function(user) {
     return true;
   }
 
-  // Check if user's profile matches any audience criteria
+  // For regular users, check STRICT matching like courses
+  // User must have ALL profile fields populated and they must ALL match
   const userUniversity = user?.university;
   const userFaculty = user?.faculty;
   const userDepartment = user?.department;
   const userLevel = user?.level;
 
-  const hasUniversityMatch = !audience.universities?.length ||
-    audience.universities.includes(userUniversity);
-  const hasFacultyMatch = !audience.faculties?.length ||
-    audience.faculties.includes(userFaculty);
-  const hasDepartmentMatch = !audience.departments?.length ||
-    audience.departments.includes(userDepartment);
-  const hasLevelMatch = !audience.levels?.length ||
-    audience.levels.includes(userLevel);
+  // If user doesn't have complete profile, they can't access restricted resources
+  if (!userUniversity || !userFaculty || !userDepartment || !userLevel) {
+    return false;
+  }
+
+  // STRICT matching: ALL audience fields must match user's profile
+  const hasUniversityMatch = audience.universities?.includes(userUniversity);
+  const hasFacultyMatch = audience.faculties?.includes(userFaculty);
+  const hasDepartmentMatch = audience.departments?.includes(userDepartment);
+  const hasLevelMatch = audience.levels?.includes(userLevel);
 
   return hasUniversityMatch && hasFacultyMatch && hasDepartmentMatch && hasLevelMatch;
 };

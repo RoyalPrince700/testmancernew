@@ -13,6 +13,7 @@ const Quiz = () => {
   const [quizStarted, setQuizStarted] = useState(false);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [violations, setViolations] = useState(0);
 
   useEffect(() => {
     fetchQuiz();
@@ -45,9 +46,7 @@ const Quiz = () => {
         questions: response.data.quiz.questions.map((q, index) => ({
           id: q._id,
           question: q.question,
-          options: q.options,
-          correctAnswer: q.correctAnswer,
-          explanation: q.explanation || 'No explanation provided.'
+          options: q.options
         }))
       });
       setTimeLeft(response.data.quiz.timeLimit || 1800);
@@ -61,7 +60,73 @@ const Quiz = () => {
 
   const startQuiz = () => {
     setQuizStarted(true);
+    try {
+      if (document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+      }
+    } catch (_) {}
   };
+
+  // Anti-cheat: tab switching, fullscreen exit, copy/paste, context menu, devtools shortcuts
+  useEffect(() => {
+    if (!quizStarted) return;
+
+    const addViolation = (reason) => {
+      setViolations((prev) => {
+        const next = prev + 1;
+        if (next === 1) toast.error('Focus lost detected. Stay on this page.');
+        if (next === 2) toast.error('Second violation. One more will auto-submit.');
+        if (next >= 3) {
+          toast.error('Cheat policy triggered. Submitting your quiz.');
+          handleSubmitQuiz();
+        }
+        return next;
+      });
+    };
+
+    const onVisibility = () => {
+      if (document.hidden) addViolation('visibility');
+    };
+    const onBlur = () => addViolation('blur');
+    const onFullscreenChange = () => {
+      const inFs = !!(document.fullscreenElement);
+      if (!inFs) addViolation('fullscreen-exit');
+    };
+    const onBeforeUnload = (e) => {
+      e.preventDefault();
+      e.returnValue = '';
+      addViolation('unload');
+    };
+    const onContextMenu = (e) => {
+      e.preventDefault();
+    };
+    const onKeyDown = (e) => {
+      const ctrl = e.ctrlKey || e.metaKey;
+      const blocked = (
+        ctrl && (e.key.toLowerCase() === 'c' || e.key.toLowerCase() === 'v' || e.key.toLowerCase() === 'x' || e.key.toLowerCase() === 's' || e.key.toLowerCase() === 'p')
+      ) || e.key === 'F12' || (ctrl && e.shiftKey && (e.key === 'I' || e.key === 'J'));
+      if (blocked) {
+        e.preventDefault();
+        addViolation('keys');
+      }
+    };
+
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('blur', onBlur);
+    document.addEventListener('fullscreenchange', onFullscreenChange);
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('contextmenu', onContextMenu);
+    document.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('blur', onBlur);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('contextmenu', onContextMenu);
+      document.removeEventListener('keydown', onKeyDown);
+    };
+  }, [quizStarted]);
 
   const handleAnswerSelect = (questionId, answerIndex) => {
     setSelectedAnswers(prev => ({
@@ -120,6 +185,11 @@ const Quiz = () => {
       toast.error('Failed to submit quiz');
     } finally {
       setSubmitting(false);
+      try {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      } catch (_) {}
     }
   };
 

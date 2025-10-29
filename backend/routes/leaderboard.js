@@ -12,7 +12,7 @@ router.get('/global', authenticateToken, async (req, res) => {
     const skip = (page - 1) * limit;
 
     const users = await User.find()
-      .select('name avatar gems completedModules quizHistory learningGoals')
+      .select('name username avatar gems completedModules quizHistory learningCategories')
       .sort({ gems: -1 })
       .skip(skip)
       .limit(limit);
@@ -21,11 +21,12 @@ router.get('/global', authenticateToken, async (req, res) => {
       rank: skip + index + 1,
       userId: user._id,
       name: user.name,
+      username: user.username,
       avatar: user.avatar,
       gems: user.gems,
       completedModules: user.completedModules.length,
       totalQuizzes: user.quizHistory.length,
-      learningGoals: user.learningGoals
+      learningCategories: user.learningCategories
     }));
 
     // Get current user's rank
@@ -56,8 +57,8 @@ router.get('/goal/:goal', authenticateToken, async (req, res) => {
     const { goal } = req.params;
     const limit = parseInt(req.query.limit) || 50;
 
-    const users = await User.find({ learningGoals: goal })
-      .select('name avatar gems completedModules quizHistory learningGoals')
+    const users = await User.find({ learningCategories: goal })
+      .select('name username avatar gems completedModules quizHistory learningCategories')
       .sort({ gems: -1 })
       .limit(limit);
 
@@ -65,21 +66,22 @@ router.get('/goal/:goal', authenticateToken, async (req, res) => {
       rank: index + 1,
       userId: user._id,
       name: user.name,
+      username: user.username,
       avatar: user.avatar,
       gems: user.gems,
       completedModules: user.completedModules.length,
       totalQuizzes: user.quizHistory.length,
-      learningGoals: user.learningGoals
+      learningCategories: user.learningCategories
     }));
 
     // Get current user's rank in this category
     const currentUser = await User.findById(req.user.userId);
-    if (!currentUser.learningGoals.includes(goal)) {
-      return res.status(400).json({ message: 'User does not have this learning goal' });
+    if (!currentUser.learningCategories.includes(goal)) {
+      return res.status(400).json({ message: 'User does not have this learning category' });
     }
 
     const userRank = await User.countDocuments({
-      learningGoals: goal,
+      learningCategories: goal,
       gems: { $gt: currentUser.gems }
     }) + 1;
 
@@ -104,7 +106,7 @@ router.get('/weekly', authenticateToken, async (req, res) => {
     weekAgo.setDate(weekAgo.getDate() - 7);
 
     const users = await User.find()
-      .select('name avatar gems completedModules quizHistory learningGoals')
+      .select('name username avatar gems completedModules quizHistory learningCategories')
       .sort({ gems: -1 })
       .limit(20);
 
@@ -125,6 +127,7 @@ router.get('/weekly', authenticateToken, async (req, res) => {
         rank: index + 1,
         userId: user._id,
         name: user.name,
+        username: user.username,
         avatar: user.avatar,
         gems: user.gems,
         weeklyQuizzes: weeklyQuizzes.length,
@@ -150,15 +153,15 @@ router.get('/compare', authenticateToken, async (req, res) => {
     const globalRank = await User.countDocuments({ gems: { $gt: currentUser.gems } }) + 1;
     const totalUsers = await User.countDocuments();
 
-    // Rankings by learning goals
+    // Rankings by learning categories
     const goalRankings = {};
-    for (const goal of currentUser.learningGoals) {
+    for (const goal of currentUser.learningCategories) {
       const goalRank = await User.countDocuments({
-        learningGoals: goal,
+        learningCategories: goal,
         gems: { $gt: currentUser.gems }
       }) + 1;
 
-      const totalInGoal = await User.countDocuments({ learningGoals: goal });
+      const totalInGoal = await User.countDocuments({ learningCategories: goal });
 
       goalRankings[goal] = {
         rank: goalRank,

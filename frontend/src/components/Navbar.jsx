@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaBars, FaTimes, FaUser, FaTrophy, FaBook, FaHome, FaSignOutAlt, FaGem, FaChartLine, FaFolder } from 'react-icons/fa';
+import { FaBars, FaTimes, FaUser, FaTrophy, FaBook, FaHome, FaSignOutAlt, FaGem, FaChartLine, FaFolder, FaClipboardCheck } from 'react-icons/fa';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated, isAdmin, isSubAdmin } = useAuth();
@@ -22,8 +22,7 @@ const Navbar = () => {
     const baseItems = [
       { path: '/', label: 'Home', icon: FaHome },
       { path: '/dashboard', label: 'Dashboard', icon: FaChartLine, protected: true },
-      { path: '/courses', label: 'Courses', icon: FaBook, protected: true },
-      { path: '/resources', label: 'Resources', icon: FaFolder, protected: true },
+      { path: '/dashboard?tab=activity', label: 'CA/Exam', icon: FaClipboardCheck, protected: true },
       { path: '/leaderboard', label: 'Leaderboard', icon: FaTrophy, protected: true },
     ];
 
@@ -75,8 +74,8 @@ const Navbar = () => {
                   to={item.path}
                   className={`flex items-center space-x-1 px-3 py-2 text-sm font-medium transition-colors duration-200 ${
                     isActive(item.path)
-                      ? 'text-blue-600 border-b-2 border-blue-600'
-                      : 'text-gray-700 hover:text-blue-600'
+                      ? 'text-green-600 border-b-2 border-green-600'
+                      : 'text-gray-700 hover:text-green-600'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -106,7 +105,7 @@ const Navbar = () => {
                         className="w-8 h-8 rounded-full"
                       />
                     ) : (
-                      <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
+                      <div className="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center">
                         <FaUser className="w-4 h-4 text-white" />
                       </div>
                     )}
@@ -135,7 +134,7 @@ const Navbar = () => {
             ) : (
               <Link
                 to="/auth"
-                className="text-gray-700 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                className="text-gray-700 hover:text-green-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
                 Sign In
               </Link>
@@ -204,8 +203,8 @@ const Navbar = () => {
                         onClick={() => setIsOpen(false)}
                         className={`flex items-center space-x-3 px-4 py-3 text-base font-medium rounded-lg transition-colors duration-200 ${
                           isActive(item.path)
-                            ? 'text-blue-600 bg-blue-50 border-r-4 border-blue-600'
-                            : 'text-gray-700 hover:text-blue-600 hover:bg-gray-50'
+                            ? 'text-green-600 bg-green-50 border-r-4 border-green-600'
+                            : 'text-gray-700 hover:text-green-600 hover:bg-gray-50'
                         }`}
                       >
                         <Icon className="w-5 h-5" />
@@ -228,7 +227,7 @@ const Navbar = () => {
                       <Link
                         to="/profile"
                         onClick={() => setIsOpen(false)}
-                        className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                        className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                       >
                         <FaUser className="w-5 h-5" />
                         <span>Profile</span>
@@ -236,7 +235,7 @@ const Navbar = () => {
 
                       <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 w-full text-left px-4 py-3 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                        className="flex items-center space-x-3 w-full text-left px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                       >
                         <FaSignOutAlt className="w-5 h-5" />
                         <span>Logout</span>
@@ -246,7 +245,7 @@ const Navbar = () => {
                     <Link
                       to="/auth"
                       onClick={() => setIsOpen(false)}
-                      className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                      className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
                     >
                       <span>Sign In</span>
                     </Link>

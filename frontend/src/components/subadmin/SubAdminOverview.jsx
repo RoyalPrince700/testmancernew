@@ -62,14 +62,14 @@ const SubAdminOverview = () => {
     <div className="space-y-6">
       {/* Header */}
       <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-6">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-xl font-semibold text-gray-900">Sub Admin Dashboard</h1>
             <p className="text-gray-600 mt-1 text-sm">
               Welcome back, {user?.name}! Manage content within your assigned scope.
             </p>
           </div>
-          <div className="text-right">
+          <div className="mt-3 md:mt-0 md:text-right">
             <div className="text-xs text-gray-500">Role</div>
             <div className="font-semibold text-gray-900 text-sm">{getRoleDisplayName(user?.role)}</div>
           </div>
@@ -218,26 +218,7 @@ const SubAdminOverview = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
-      <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
-        <h2 className="text-base font-semibold text-gray-900 mb-3">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <button className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <MdMenuBook className="w-4 h-4 text-blue-600 mr-2" />
-            <div className="text-left">
-              <div className="font-medium text-gray-900 text-sm">Manage Courses</div>
-              <div className="text-xs text-gray-500">Create, edit, or delete courses in your scope</div>
-            </div>
-          </button>
-          <button className="flex items-center p-3 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
-            <MdQuiz className="w-4 h-4 text-green-600 mr-2" />
-            <div className="text-left">
-              <div className="font-medium text-gray-900 text-sm">Create Quizzes</div>
-              <div className="text-xs text-gray-500">Add assessments to your courses</div>
-            </div>
-          </button>
-        </div>
-      </div>
+      
     </div>
   );
 };

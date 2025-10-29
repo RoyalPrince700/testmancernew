@@ -4,7 +4,6 @@ import ResourceFolder from '../models/ResourceFolder.js';
 import User from '../models/User.js';
 import { authenticateToken, requirePermission, authorize } from '../middleware/auth.js';
 import Joi from 'joi';
-import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 
@@ -462,57 +461,10 @@ router.get('/proxy/:resourceId', authenticateToken, async (req, res) => {
 
     console.log('[Backend] Access verified');
 
-    // For links, just return the URL
-    if (resource.type === 'link') {
-      console.log('[Backend] Returning link URL directly');
-      return res.json({ url: resource.url });
-    }
-
-    // Extract public_id from Cloudinary URL
-    try {
-      const urlParts = resource.url.split('/');
-      const versionIndex = urlParts.findIndex(part => part.startsWith('v'));
-      
-      if (versionIndex === -1) {
-        console.log('[Backend] No version found, returning original URL');
-        return res.json({ url: resource.url });
-      }
-
-      const publicIdWithExt = urlParts.slice(versionIndex + 1).join('/');
-      console.log('[Backend] Extracted public ID with extension:', publicIdWithExt);
-
-      // Generate authenticated URL with token
-      let authenticatedUrl;
-      if (resource.type === 'pdf' || resource.type === 'document') {
-        console.log('[Backend] Generating authenticated URL for raw resource');
-        authenticatedUrl = cloudinary.url(publicIdWithExt, {
-          resource_type: 'raw',
-          type: 'authenticated',
-          sign_url: true,
-          secure: true,
-          expires_at: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours
-        });
-      } else if (resource.type === 'video' || resource.type === 'audio') {
-        console.log('[Backend] Generating authenticated URL for video/audio');
-        const publicIdWithoutExt = publicIdWithExt.split('.')[0];
-        authenticatedUrl = cloudinary.url(publicIdWithoutExt, {
-          resource_type: 'video',
-          type: 'authenticated',
-          sign_url: true,
-          secure: true,
-          expires_at: Math.floor(Date.now() / 1000) + (60 * 60 * 24) // 24 hours
-        });
-      } else {
-        authenticatedUrl = resource.url;
-      }
-
-      console.log('[Backend] Generated authenticated URL:', authenticatedUrl);
-      res.json({ url: authenticatedUrl });
-    } catch (error) {
-      console.error('[Backend] Error generating authenticated URL:', error);
-      // Fallback to original URL
-      res.json({ url: resource.url });
-    }
+    // For all resources, return the secure URL directly
+    // Authentication is handled at the API level, not Cloudinary level
+    console.log('[Backend] Returning resource URL:', resource.url);
+    res.json({ url: resource.url });
   } catch (error) {
     console.error('[Backend] Error proxying resource:', error);
     res.status(500).json({ message: 'Server error', error: error.message });

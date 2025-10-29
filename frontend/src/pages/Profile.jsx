@@ -17,7 +17,7 @@ const Profile = () => {
     level: ''
   });
   const [stats, setStats] = useState({});
-  const [recentQuizzes, setRecentQuizzes] = useState([]);
+  const [recentAssessments, setRecentAssessments] = useState([]);
   const [achievements, setAchievements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -85,12 +85,12 @@ const Profile = () => {
         timeSpent: '24h 32m'
       });
 
-      setRecentQuizzes([
-        { id: 1, title: 'JavaScript Fundamentals', score: 95, completedAt: '2024-01-15', timeSpent: '18m' },
-        { id: 2, title: 'React Basics', score: 88, completedAt: '2024-01-12', timeSpent: '22m' },
-        { id: 3, title: 'CSS Grid Layout', score: 92, completedAt: '2024-01-10', timeSpent: '15m' },
-        { id: 4, title: 'Python Data Science', score: 78, completedAt: '2024-01-08', timeSpent: '35m' },
-        { id: 5, title: 'UI/UX Design', score: 85, completedAt: '2024-01-05', timeSpent: '28m' }
+      setRecentAssessments([
+        { id: 1, title: 'JavaScript Fundamentals CA', score: 95, completedAt: '2024-01-15', timeSpent: '18m' },
+        { id: 2, title: 'React Basics Exam', score: 88, completedAt: '2024-01-12', timeSpent: '22m' },
+        { id: 3, title: 'CSS Grid Layout CA', score: 92, completedAt: '2024-01-10', timeSpent: '15m' },
+        { id: 4, title: 'Python Data Science Exam', score: 78, completedAt: '2024-01-08', timeSpent: '35m' },
+        { id: 5, title: 'UI/UX Design CA', score: 85, completedAt: '2024-01-05', timeSpent: '28m' }
       ]);
 
       setAchievements([
@@ -314,23 +314,23 @@ const Profile = () => {
 
             {/* Recent Activity */}
             <div className="card">
-              <h3 className="text-xl font-semibold text-gray-900 mb-4">Recent Quizzes</h3>
-              {recentQuizzes.length > 0 ? (
+              <h3 className="text-xl font-semibold text-gray-900 mb-4">Recent Assessments</h3>
+              {recentAssessments.length > 0 ? (
                 <div className="space-y-3">
-                  {recentQuizzes.slice(0, 5).map((quiz) => (
-                    <div key={quiz.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                  {recentAssessments.slice(0, 5).map((assessment) => (
+                    <div key={assessment.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div>
-                        <h4 className="font-medium text-gray-900">{quiz.title}</h4>
-                        <p className="text-sm text-gray-500">{quiz.completedAt} • {quiz.timeSpent}</p>
+                        <h4 className="font-medium text-gray-900">{assessment.title}</h4>
+                        <p className="text-sm text-gray-500">{assessment.completedAt} • {assessment.timeSpent}</p>
                       </div>
                       <div className="text-right">
-                        <div className="font-semibold text-gray-900">{quiz.score}%</div>
+                        <div className="font-semibold text-gray-900">{assessment.score}%</div>
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500">No recent quizzes found.</p>
+                <p className="text-gray-500">No recent assessments found.</p>
               )}
             </div>
           </div>
@@ -338,31 +338,31 @@ const Profile = () => {
 
         {activeTab === 'quizzes' && (
           <div className="card">
-            <h3 className="text-xl font-semibold text-gray-900 mb-4">Quiz History</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">Assessment History</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="text-left py-3 px-4 font-medium text-gray-700">Quiz</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-700">Assessment</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">Score</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">Time</th>
                     <th className="text-right py-3 px-4 font-medium text-gray-700">Date</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {recentQuizzes.map((quiz) => (
-                    <tr key={quiz.id} className="border-b border-gray-100 hover:bg-gray-50">
-                      <td className="py-3 px-4 font-medium text-gray-900">{quiz.title}</td>
+                  {recentAssessments.map((assessment) => (
+                    <tr key={assessment.id} className="border-b border-gray-100 hover:bg-gray-50">
+                      <td className="py-3 px-4 font-medium text-gray-900">{assessment.title}</td>
                       <td className="py-3 px-4 text-right">
                         <span className={`font-semibold ${
-                          quiz.score >= 90 ? 'text-green-600' :
-                          quiz.score >= 70 ? 'text-yellow-600' : 'text-red-600'
+                          assessment.score >= 90 ? 'text-green-600' :
+                          assessment.score >= 70 ? 'text-yellow-600' : 'text-red-600'
                         }`}>
-                          {quiz.score}%
+                          {assessment.score}%
                         </span>
                       </td>
-                      <td className="py-3 px-4 text-right text-gray-600">{quiz.timeSpent}</td>
-                      <td className="py-3 px-4 text-right text-gray-600">{quiz.completedAt}</td>
+                      <td className="py-3 px-4 text-right text-gray-600">{assessment.timeSpent}</td>
+                      <td className="py-3 px-4 text-right text-gray-600">{assessment.completedAt}</td>
                     </tr>
                   ))}
                 </tbody>

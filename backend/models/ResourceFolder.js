@@ -74,11 +74,6 @@ resourceFolderSchema.methods.isAccessibleBy = function(user) {
     return true;
   }
 
-  // Subadmins can access folders they created
-  if (user?.role === 'subadmin' && this.createdBy.toString() === user._id.toString()) {
-    return true;
-  }
-
   // If no audience restrictions, accessible to all
   const audience = this.audience || {};
   if (!audience.universities?.length && !audience.faculties?.length &&
@@ -86,34 +81,37 @@ resourceFolderSchema.methods.isAccessibleBy = function(user) {
     return true;
   }
 
-  // For subadmins, check their assigned scope
+  // For subadmins, check their assigned scope (matching courses logic)
   if (user?.role === 'subadmin') {
-    const hasUniversityMatch = !audience.universities?.length ||
-      audience.universities.some(uni => user.assignedUniversities?.includes(uni));
-    const hasFacultyMatch = !audience.faculties?.length ||
-      audience.faculties.some(fac => user.assignedFaculties?.includes(fac));
-    const hasDepartmentMatch = !audience.departments?.length ||
-      audience.departments.some(dept => user.assignedDepartments?.includes(dept));
-    const hasLevelMatch = !audience.levels?.length ||
-      audience.levels.some(lvl => user.assignedLevels?.includes(lvl));
+    const hasUniversityMatch = !user.assignedUniversities?.length ||
+      audience.universities.some(uni => user.assignedUniversities.includes(uni));
+    const hasFacultyMatch = !user.assignedFaculties?.length ||
+      audience.faculties.some(fac => user.assignedFaculties.includes(fac));
+    const hasDepartmentMatch = !user.assignedDepartments?.length ||
+      audience.departments.some(dept => user.assignedDepartments.includes(dept));
+    const hasLevelMatch = !user.assignedLevels?.length ||
+      audience.levels.some(lvl => user.assignedLevels.includes(lvl));
 
     return hasUniversityMatch && hasFacultyMatch && hasDepartmentMatch && hasLevelMatch;
   }
 
-  // For regular users, check their profile matches any audience criteria
+  // For regular users, check STRICT matching like courses
+  // User must have ALL profile fields populated and they must ALL match
   const userUniversity = user?.university;
   const userFaculty = user?.faculty;
   const userDepartment = user?.department;
   const userLevel = user?.level;
 
-  const hasUniversityMatch = !audience.universities?.length ||
-    audience.universities.includes(userUniversity);
-  const hasFacultyMatch = !audience.faculties?.length ||
-    audience.faculties.includes(userFaculty);
-  const hasDepartmentMatch = !audience.departments?.length ||
-    audience.departments.includes(userDepartment);
-  const hasLevelMatch = !audience.levels?.length ||
-    audience.levels.includes(userLevel);
+  // If user doesn't have complete profile, they can't access restricted resources
+  if (!userUniversity || !userFaculty || !userDepartment || !userLevel) {
+    return false;
+  }
+
+  // STRICT matching: ALL audience fields must match user's profile
+  const hasUniversityMatch = audience.universities?.includes(userUniversity);
+  const hasFacultyMatch = audience.faculties?.includes(userFaculty);
+  const hasDepartmentMatch = audience.departments?.includes(userDepartment);
+  const hasLevelMatch = audience.levels?.includes(userLevel);
 
   return hasUniversityMatch && hasFacultyMatch && hasDepartmentMatch && hasLevelMatch;
 };
@@ -124,58 +122,38 @@ resourceFolderSchema.statics.getScopedFolders = function(user) {
     return this.find({ isActive: true });
   }
 
-  const { assignedUniversities, assignedFaculties, assignedDepartments, assignedLevels } = user;
-
-  // Build $or conditions array
+  // Build filter based on subadmin's assignments, matching courses filtering logic
   const orConditions = [];
 
-  // 1. Folders created by this subadmin
-  orConditions.push({ createdBy: user._id });
-
-  // 2. Folders with no audience restrictions (global folders)
+  // Include public/global folders (empty audience)
   orConditions.push({
     $and: [
-      { $or: [
-        { 'audience.universities': { $exists: false } },
-        { 'audience.universities': { $size: 0 } }
-      ]},
-      { $or: [
-        { 'audience.faculties': { $exists: false } },
-        { 'audience.faculties': { $size: 0 } }
-      ]},
-      { $or: [
-        { 'audience.departments': { $exists: false } },
-        { 'audience.departments': { $size: 0 } }
-      ]},
-      { $or: [
-        { 'audience.levels': { $exists: false } },
-        { 'audience.levels': { $size: 0 } }
-      ]}
+      { $or: [{ 'audience.universities': { $size: 0 } }, { 'audience.universities': { $exists: false } }] },
+      { $or: [{ 'audience.faculties': { $size: 0 } }, { 'audience.faculties': { $exists: false } }] },
+      { $or: [{ 'audience.departments': { $size: 0 } }, { 'audience.departments': { $exists: false } }] },
+      { $or: [{ 'audience.levels': { $size: 0 } }, { 'audience.levels': { $exists: false } }] }
     ]
   });
 
-  // 3. Folders that match subadmin's assigned scope
-  const scopeConditions = [];
-  
-  if (assignedUniversities?.length > 0) {
-    scopeConditions.push({ 'audience.universities': { $in: assignedUniversities } });
+  // Include folders matching their assignments
+  const matchConditions = [];
+  if (user.assignedUniversities?.length) {
+    matchConditions.push({ 'audience.universities': { $in: user.assignedUniversities } });
   }
-  if (assignedFaculties?.length > 0) {
-    scopeConditions.push({ 'audience.faculties': { $in: assignedFaculties } });
+  if (user.assignedFaculties?.length) {
+    matchConditions.push({ 'audience.faculties': { $in: user.assignedFaculties } });
   }
-  if (assignedDepartments?.length > 0) {
-    scopeConditions.push({ 'audience.departments': { $in: assignedDepartments } });
+  if (user.assignedDepartments?.length) {
+    matchConditions.push({ 'audience.departments': { $in: user.assignedDepartments } });
   }
-  if (assignedLevels?.length > 0) {
-    scopeConditions.push({ 'audience.levels': { $in: assignedLevels } });
-  }
-
-  // Add scope conditions to OR if any exist
-  if (scopeConditions.length > 0) {
-    orConditions.push({ $or: scopeConditions });
+  if (user.assignedLevels?.length) {
+    matchConditions.push({ 'audience.levels': { $in: user.assignedLevels } });
   }
 
-  // Find folders that match any of the conditions
+  if (matchConditions.length > 0) {
+    orConditions.push({ $and: matchConditions });
+  }
+
   return this.find({
     isActive: true,
     $or: orConditions
