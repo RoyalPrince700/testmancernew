@@ -270,6 +270,65 @@ assessmentSchema.pre('save', function(next) {
   next();
 });
 
+// Method to check if assessment is accessible by user (STRICT matching like courses/resources)
+assessmentSchema.methods.isAccessibleBy = function(user) {
+  // Admin has access to everything
+  if (user?.role === 'admin') {
+    return true;
+  }
+
+  // If no audience restrictions, accessible to all
+  const audience = this.audience || {};
+  if (!audience.universities?.length && !audience.faculties?.length &&
+      !audience.departments?.length && !audience.levels?.length) {
+    return true;
+  }
+
+  // For subadmins, check their assigned scope
+  if (user?.role === 'subadmin') {
+    const hasUniversityMatch = !user.assignedUniversities?.length ||
+      audience.universities.some(uni => user.assignedUniversities.includes(uni));
+    const hasFacultyMatch = !user.assignedFaculties?.length ||
+      audience.faculties.some(fac => user.assignedFaculties.includes(fac));
+    const hasDepartmentMatch = !user.assignedDepartments?.length ||
+      audience.departments.some(dept => user.assignedDepartments.includes(dept));
+    const hasLevelMatch = !user.assignedLevels?.length ||
+      audience.levels.some(lvl => user.assignedLevels.includes(lvl));
+
+    return hasUniversityMatch && hasFacultyMatch && hasDepartmentMatch && hasLevelMatch;
+  }
+
+  // For regular users, check STRICT matching like courses
+  // User must have ALL profile fields populated and they must ALL match
+  const userUniversity = user?.university;
+  const userFaculty = user?.faculty;
+  const userDepartment = user?.department;
+  const userLevel = user?.level;
+
+  // If user doesn't have complete profile, they can't access restricted assessments
+  if (!userUniversity || !userFaculty || !userDepartment || !userLevel) {
+    return false;
+  }
+
+  // STRICT matching: ALL populated audience fields must match user's profile
+  let hasMatch = true;
+
+  if (audience.universities?.length > 0) {
+    hasMatch = hasMatch && audience.universities.includes(userUniversity);
+  }
+  if (audience.faculties?.length > 0) {
+    hasMatch = hasMatch && audience.faculties.includes(userFaculty);
+  }
+  if (audience.departments?.length > 0) {
+    hasMatch = hasMatch && audience.departments.includes(userDepartment);
+  }
+  if (audience.levels?.length > 0) {
+    hasMatch = hasMatch && audience.levels.includes(userLevel);
+  }
+
+  return hasMatch;
+};
+
 // Validation middleware
 assessmentSchema.pre('save', function(next) {
   if (this.questions.length === 0) {

@@ -121,7 +121,7 @@ const updateAssessmentSchema = Joi.object({
 
 // Admin routes for managing assessments
 
-// Get all assessments (admin)
+// Get all assessments (admin) - scoped for subadmins
 router.get('/admin/assessments', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
   try {
     const { type, courseId, isActive } = req.query;
@@ -135,12 +135,27 @@ router.get('/admin/assessments', authenticateToken, requirePermission('manage_co
       filter.isActive = flag;
     }
 
-    const assessments = await Assessment.find(filter)
+    const UserModel = (await import('../models/User.js')).default;
+    const user = await UserModel.findById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get all assessments matching base filters
+    const allAssessments = await Assessment.find(filter)
       .populate('courseId', 'title courseCode')
       .sort({ createdAt: -1 });
 
+    // For subadmins, filter to only show assessments within their scope
+    let assessments = allAssessments;
+    if (user.role === 'subadmin') {
+      assessments = allAssessments.filter(assessment => assessment.isAccessibleBy(user));
+    }
+
     res.json({ assessments });
   } catch (error) {
+    console.error('[Assessments][GET /admin/assessments] Server error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -203,8 +218,18 @@ router.post('/admin/assessments', authenticateToken, requirePermission('manage_c
       }
     }
 
+    // Auto-populate audience from course if not explicitly provided
+    // This ensures assessments inherit the same strict filtering as courses
+    const assessmentAudience = value.audience || {
+      universities: course.audience?.universities || [],
+      faculties: course.audience?.faculties || [],
+      departments: course.audience?.departments || [],
+      levels: course.audience?.levels || []
+    };
+
     const assessment = new Assessment({
       ...value,
+      audience: assessmentAudience,
       createdBy: user._id || user.email || 'admin'
     });
 
@@ -300,25 +325,28 @@ router.delete('/admin/assessments/:id', authenticateToken, requirePermission('ma
 
 // Student routes for taking assessments
 
-// Get available assessments for student
+// Get available assessments for student (STRICT filtering like courses/resources)
 router.get('/', authenticateToken, async (req, res) => {
   try {
-    const user = req.user;
+    const UserModel = (await import('../models/User.js')).default;
+    const user = await UserModel.findById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    // Find assessments based on user's audience
-    const assessments = await Assessment.find({
-      isActive: true,
-      $or: [
-        { 'audience.universities': { $in: user.universities || [] } },
-        { 'audience.faculties': { $in: user.faculties || [] } },
-        { 'audience.departments': { $in: user.departments || [] } },
-        { 'audience.levels': { $in: user.levels || [] } },
-        { 'audience.universities': { $size: 0 }, 'audience.faculties': { $size: 0 }, 'audience.levels': { $size: 0 } }
-      ]
-    }).populate('courseId', 'title courseCode');
+    // Get all active assessments
+    const allAssessments = await Assessment.find({ isActive: true })
+      .populate('courseId', 'title courseCode');
 
-    res.json({ assessments: assessments.map(sanitizeAssessmentForStudent) });
+    // Filter using strict matching (like courses/resources)
+    const accessibleAssessments = allAssessments.filter(assessment => 
+      assessment.isAccessibleBy(user)
+    );
+
+    res.json({ assessments: accessibleAssessments.map(sanitizeAssessmentForStudent) });
   } catch (error) {
+    console.error('[Assessments][GET /] Server error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -352,72 +380,84 @@ router.get('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'Assessment not found' });
     }
 
-    // Check if user has access
-    const user = req.user;
-    const hasAccess = (
-      (!assessment.audience?.universities?.length || assessment.audience.universities.some(u => user.universities?.includes(u))) &&
-      (!assessment.audience?.faculties?.length || assessment.audience.faculties.some(f => user.faculties?.includes(f))) &&
-      (!assessment.audience?.departments?.length || assessment.audience.departments.some(d => user.departments?.includes(d))) &&
-      (!assessment.audience?.levels?.length || assessment.audience.levels.some(l => user.levels?.includes(l)))
-    );
+    // Check if user has access using STRICT matching
+    const UserModel = (await import('../models/User.js')).default;
+    const user = await UserModel.findById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
 
-    if (!hasAccess) {
+    if (!assessment.isAccessibleBy(user)) {
       return res.status(403).json({ message: 'You do not have access to this assessment' });
     }
 
     const sanitized = sanitizeAssessmentForStudent(assessment);
     res.json({ assessment: sanitized });
   } catch (error) {
+    console.error('[Assessments][GET /:id] Server error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Get assessments by course
+// Get assessments by course (STRICT filtering)
 router.get('/course/:courseId', authenticateToken, async (req, res) => {
   try {
-    const user = req.user;
-    const assessments = await Assessment.find({
+    const UserModel = (await import('../models/User.js')).default;
+    const user = await UserModel.findById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get all active assessments for the course
+    const allAssessments = await Assessment.find({
       courseId: req.params.courseId,
-      isActive: true,
-      $or: [
-        { 'audience.universities': { $in: user.universities || [] } },
-        { 'audience.faculties': { $in: user.faculties || [] } },
-        { 'audience.departments': { $in: user.departments || [] } },
-        { 'audience.levels': { $in: user.levels || [] } },
-        { 'audience.universities': { $size: 0 }, 'audience.faculties': { $size: 0 }, 'audience.levels': { $size: 0 } }
-      ]
+      isActive: true
     }).populate('courseId', 'title courseCode');
 
-    res.json({ assessments: assessments.map(sanitizeAssessmentForStudent) });
+    // Filter using strict matching
+    const accessibleAssessments = allAssessments.filter(assessment => 
+      assessment.isAccessibleBy(user)
+    );
+
+    res.json({ assessments: accessibleAssessments.map(sanitizeAssessmentForStudent) });
   } catch (error) {
+    console.error('[Assessments][GET /course/:courseId] Server error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Get assessments by type
+// Get assessments by type (STRICT filtering)
 router.get('/type/:type', authenticateToken, async (req, res) => {
   try {
     const { type } = req.params;
-    const user = req.user;
 
     if (!['ca', 'exam'].includes(type)) {
       return res.status(400).json({ message: 'Invalid assessment type' });
     }
 
-    const assessments = await Assessment.find({
+    const UserModel = (await import('../models/User.js')).default;
+    const user = await UserModel.findById(req.user.userId);
+    
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Get all active assessments of the specified type
+    const allAssessments = await Assessment.find({
       type,
-      isActive: true,
-      $or: [
-        { 'audience.universities': { $in: user.universities || [] } },
-        { 'audience.faculties': { $in: user.faculties || [] } },
-        { 'audience.departments': { $in: user.departments || [] } },
-        { 'audience.levels': { $in: user.levels || [] } },
-        { 'audience.universities': { $size: 0 }, 'audience.faculties': { $size: 0 }, 'audience.levels': { $size: 0 } }
-      ]
+      isActive: true
     }).populate('courseId', 'title courseCode');
 
-    res.json({ assessments: assessments.map(sanitizeAssessmentForStudent) });
+    // Filter using strict matching
+    const accessibleAssessments = allAssessments.filter(assessment => 
+      assessment.isAccessibleBy(user)
+    );
+
+    res.json({ assessments: accessibleAssessments.map(sanitizeAssessmentForStudent) });
   } catch (error) {
+    console.error('[Assessments][GET /type/:type] Server error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
