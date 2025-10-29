@@ -3,7 +3,7 @@ import { motion } from "framer-motion";
 
 function Auth() {
   const handleGoogleAuth = () => {
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+    const apiUrl = import.meta.env.VITE_API_URL || 'https://testmancernew.onrender.com';
     window.location.href = `${apiUrl}/api/auth/google`;
   };
 
