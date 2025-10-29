@@ -1,0 +1,34 @@
+name: Keep Render Backend Awake
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # every 5 minutes
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      # Optional: set BACKEND_URL as a repo secret (e.g. https://testmancernew.onrender.com)
+      BACKEND_URL: ${{ secrets.BACKEND_URL }}
+      PATH_TO_PING: /api/health
+    steps:
+      - name: Ping Render backend health endpoint
+        shell: bash
+        run: |
+          URL="${BACKEND_URL:-https://testmancernew.onrender.com}${PATH_TO_PING}"
+          echo "Pinging: $URL"
+          # Try up to 3 times to handle cold starts/transient failures
+          for attempt in 1 2 3; do
+            HTTP_CODE=$(curl -sS -o /dev/null -w "%{http_code}" -m 15 "$URL" -H "User-Agent: keepalive-github-action")
+            echo "Attempt $attempt -> HTTP $HTTP_CODE"
+            if [ "$HTTP_CODE" -lt 500 ] && [ "$HTTP_CODE" -ne 000 ]; then
+              # Treat 2xx/3xx/4xx as a successful wake signal; only retry on 5xx/timeouts
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Ping failed after retries"
+          exit 1
+
+
