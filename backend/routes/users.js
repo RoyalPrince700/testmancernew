@@ -1,6 +1,7 @@
 import express from 'express';
 import User from '../models/User.js';
 import Course from '../models/Course.js';
+import { markUnitComplete, getDetailedCourseProgress } from '../services/progressService.js';
 import { authenticateToken, protect, requirePermission } from '../middleware/auth.js';
 
 const router = express.Router();
@@ -97,7 +98,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
       avatar,
       username,
       learningCategories,
+      isUndergraduate,
       university,
+      faculty,
+      department,
+      level,
       studyPreferences,
       onboardingCompleted
     } = req.body;
@@ -109,7 +114,11 @@ router.put('/profile', authenticateToken, async (req, res) => {
     if (avatar !== undefined) updateData.avatar = avatar;
     if (username !== undefined) updateData.username = username;
     if (learningCategories !== undefined) updateData.learningCategories = learningCategories;
+    if (isUndergraduate !== undefined) updateData.isUndergraduate = isUndergraduate;
     if (university !== undefined) updateData.university = university;
+    if (faculty !== undefined) updateData.faculty = faculty;
+    if (department !== undefined) updateData.department = department;
+    if (level !== undefined) updateData.level = level;
     if (studyPreferences !== undefined) updateData.studyPreferences = studyPreferences;
     if (onboardingCompleted !== undefined) updateData.onboardingCompleted = onboardingCompleted;
 
@@ -192,23 +201,71 @@ router.get('/stats', authenticateToken, async (req, res) => {
         return total + estimatedGems;
       }, 0);
 
-    // Get course progress data
-    const courses = await Course.find().select('title modules structure');
-    const courseProgress = courses.map(course => {
-      const totalUnits = course.structure?.unitCount || course.modules?.length || 0;
-      const completedUnits = user.completedModules.filter(moduleId =>
-        course.modules.some(module => module._id.toString() === moduleId.toString())
-      ).length;
+    // Get course progress data with detailed unit information
+    const courses = await Course.find().populate('modules');
+    const courseProgress = [];
 
-      return {
+    for (const course of courses) {
+      if (!course.modules || course.modules.length === 0) continue;
+
+      // Get detailed progress using the new completion gems system
+      const detailedProgress = course.getDetailedProgress(user.completionGems);
+
+      // Get quizzes attached to this course
+      const Quiz = (await import('../models/Quiz.js')).default;
+      const courseQuizzes = await Quiz.find({
         courseId: course._id,
+        isActive: true
+      }).select('_id title moduleId trigger difficulty questions');
+
+      // Enhance units with quiz information and completion status
+      const unitsWithDetails = course.modules.map(module => {
+        const unitDetail = detailedProgress.unitDetails.find(ud =>
+          ud.unitId.toString() === module._id.toString()
+        );
+
+        const unitQuizzes = courseQuizzes.filter(quiz =>
+          quiz.moduleId?.toString() === module._id.toString()
+        );
+
+        // Check quiz completion status
+        const quizHistory = user.quizHistory || [];
+        const completedQuizzes = unitQuizzes.filter(quiz =>
+          quizHistory.some(qh => qh.quizId === quiz._id.toString())
+        );
+
+        return {
+          unitId: module._id,
+          title: module.title,
+          isCompleted: unitDetail?.isCompleted || false,
+          progressPercentage: unitDetail?.progressPercentage || 0,
+          totalPages: unitDetail?.totalPages || 0,
+          completedPages: unitDetail?.completedPages || 0,
+          quizzes: unitQuizzes.map(quiz => ({
+            id: quiz._id,
+            title: quiz.title,
+            isCompleted: quizHistory.some(qh => qh.quizId === quiz._id.toString()),
+            difficulty: quiz.difficulty,
+            totalQuestions: Array.isArray(quiz.questions) ? quiz.questions.length : (quiz.totalQuestions || 0)
+          })),
+          hasQuizzes: unitQuizzes.length > 0,
+          quizzesCompleted: completedQuizzes.length,
+          totalQuizzes: unitQuizzes.length
+        };
+      });
+
+      courseProgress.push({
+        courseId: course._id,
+        courseCode: course.courseCode,
         courseTitle: course.title,
-        totalUnits,
-        completedUnits,
-        progressPercentage: totalUnits > 0 ? Math.round((completedUnits / totalUnits) * 100) : 0,
-        unitLabel: course.structure?.unitLabel || 'Module'
-      };
-    }).filter(progress => progress.totalUnits > 0); // Only include courses with units
+        courseDescription: course.description || '',
+        totalUnits: detailedProgress.totalUnits,
+        completedUnits: detailedProgress.completedUnits,
+        progressPercentage: detailedProgress.overallProgressPercentage,
+        unitLabel: detailedProgress.unitLabel,
+        units: unitsWithDetails
+      });
+    }
 
     const stats = {
       totalQuizzes,
@@ -236,96 +293,48 @@ router.post('/complete-unit', authenticateToken, async (req, res) => {
   try {
     const { courseId, unitId } = req.body;
 
-    // Validate required fields
     if (!courseId || !unitId) {
-      return res.status(400).json({
-        message: 'Course ID and Unit ID are required'
-      });
+      return res.status(400).json({ message: 'Course ID and Unit ID are required' });
     }
 
-    // Verify course exists and unit belongs to course
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
-    }
-
-    const unitExists = course.modules.some(module => module._id.toString() === unitId);
-    if (!unitExists) {
-      return res.status(404).json({ message: 'Unit not found in course' });
-    }
-
-    // Get user
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Record completion gem (only awards if first attempt)
-    const wasAwarded = await user.recordCompletionGemForUnit(courseId, unitId);
-    const gemsAwarded = wasAwarded ? 3 : 0;
-
-    res.json({
-      message: 'Unit completion recorded successfully',
-      gemsAwarded,
-      totalGems: user.gems,
-      firstAttempt: wasAwarded
+    const result = await markUnitComplete({
+      userId: req.user.userId,
+      courseId,
+      unitId
     });
 
+    if (!result.ok) {
+      return res.status(result.status).json({ message: result.error });
+    }
+
+    return res.status(result.status).json({
+      message: result.message,
+      gemsAwarded: result.gemsAwarded,
+      totalGems: result.totalGems,
+      progress: result.progress
+    });
   } catch (error) {
     console.error('Error recording unit completion:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
 
-// Mark page as completed and award gems if first attempt
+// Mark page as completed - NO-OP (pages are not tracked)
+// This endpoint exists for backwards compatibility but does nothing
+// Module completion is tracked independently via the "End Module" button
 router.post('/complete-page', authenticateToken, async (req, res) => {
   try {
-    const { courseId, pageId } = req.body;
-
-    // Validate required fields
-    if (!courseId || !pageId) {
-      return res.status(400).json({
-        message: 'Course ID and Page ID are required'
-      });
-    }
-
-    // Verify course exists and page belongs to course
-    const course = await Course.findById(courseId);
-    if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
-    }
-
-    let pageFound = false;
-    for (const module of course.modules) {
-      if (module.pages && module.pages.some(page => page._id.toString() === pageId)) {
-        pageFound = true;
-        break;
-      }
-    }
-
-    if (!pageFound) {
-      return res.status(404).json({ message: 'Page not found in course' });
-    }
-
-    // Get user
-    const user = await User.findById(req.user.userId);
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-
-    // Record completion gem (only awards if first attempt)
-    const wasAwarded = await user.recordCompletionGemForPage(courseId, pageId);
-    const gemsAwarded = wasAwarded ? 3 : 0;
-
+    // No page tracking - just return success
+    // Pages are not tracked; only module completion matters
     res.json({
-      message: 'Page completion recorded successfully',
-      gemsAwarded,
-      totalGems: user.gems,
-      firstAttempt: wasAwarded
+      message: 'Page view acknowledged (not tracked)',
+      gemsAwarded: 0,
+      totalGems: req.user.gems || 0,
+      note: 'Complete the entire module to earn 3 gems'
     });
 
   } catch (error) {
-    console.error('Error recording page completion:', error);
+    console.error('Error in page completion endpoint:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -444,30 +453,34 @@ router.put('/admin/:userId([0-9a-fA-F]{24})/role', protect, requirePermission('m
 
     const inputUniversities = sanitizeList(req.body.assignedUniversities);
     const inputFaculties = sanitizeList(req.body.assignedFaculties);
+    const inputDepartments = sanitizeList(req.body.assignedDepartments);
     const inputLevels = sanitizeList(req.body.assignedLevels);
 
     const updateData = { role };
 
     if (role === 'subadmin') {
       const hasAnyAssignment =
-        inputUniversities.length > 0 || inputFaculties.length > 0 || inputLevels.length > 0;
+        inputUniversities.length > 0 || inputFaculties.length > 0 || inputDepartments.length > 0 || inputLevels.length > 0;
       if (!hasAnyAssignment) {
         return res.status(400).json({
-          message: 'Subadmin must have at least one assigned university, faculty, or level'
+          message: 'Subadmin must have at least one assigned university, faculty, department, or level'
         });
       }
       updateData.assignedUniversities = inputUniversities;
       updateData.assignedFaculties = inputFaculties;
+      updateData.assignedDepartments = inputDepartments;
       updateData.assignedLevels = inputLevels;
     } else if (['waec_admin', 'jamb_admin'].includes(role)) {
       // Category admins don't require scoped assignments; clear them
       updateData.assignedUniversities = [];
       updateData.assignedFaculties = [];
+      updateData.assignedDepartments = [];
       updateData.assignedLevels = [];
     } else {
       // For user/admin, clear assignments
       updateData.assignedUniversities = [];
       updateData.assignedFaculties = [];
+      updateData.assignedDepartments = [];
       updateData.assignedLevels = [];
     }
 

@@ -83,6 +83,14 @@ const Onboarding = () => {
 
   const learningCategories = [
     {
+      id: 'undergraduate',
+      label: 'Undergraduate',
+      description: 'Degree Program Support',
+      icon: FaUniversity,
+      color: 'bg-indigo-500',
+      courseCount: 67
+    },
+    {
       id: 'waec',
       label: 'WAEC',
       description: 'West African Examinations Council',
@@ -115,20 +123,20 @@ const Onboarding = () => {
       courseCount: 24
     },
     {
+      id: 'ican',
+      label: 'ICAN',
+      description: 'Institute of Chartered Accountants of Nigeria',
+      icon: FaGem,
+      color: 'bg-teal-500',
+      courseCount: 15
+    },
+    {
       id: 'postutme',
       label: 'Post-UTME',
       description: 'University Admission Screening',
       icon: FaBuilding,
       color: 'bg-purple-500',
       courseCount: 18
-    },
-    {
-      id: 'undergraduate',
-      label: 'Undergraduate',
-      description: 'Degree Program Support',
-      icon: FaUniversity,
-      color: 'bg-indigo-500',
-      courseCount: 67
     }
   ];
 

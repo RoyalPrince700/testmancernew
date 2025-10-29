@@ -3,7 +3,18 @@ Build on existing structured courses system: enhance dashboard course cards with
 
 ---
 
-## Phase 1 — Extend User model for completion gems (building on existing earnedGems) ✅ READY TO START
+## Component references — Courses tab (User Dashboard)
+- Courses tab container renders in `DashboardWithSidebar` when `?tab=courses`.
+- Primary list/grid component: `frontend/src/components/dashboard/PersonalizedCourses.jsx`.
+  - Displays course code badge first (e.g., CSC101) above the title.
+- Interactive progress card for expandable units: `frontend/src/components/dashboard/CourseCard.jsx`.
+  - Used within the Courses tab; do not render in Overview.
+
+Note: The dashboard currently uses two different card components (the personalized list item and the interactive course card), which caused confusion. Keep both visually consistent and ensure the course code appears first on each.
+
+---
+
+## Phase 1 — Extend User model for completion gems (building on existing earnedGems) ✅ COMPLETED
 - [ ] Extend User model to track completion-specific gems
   - Add `completionGems: { courseId: ObjectId, completedUnits: [ObjectId], completedPages: [ObjectId] }[]` (separate from quiz `earnedGems`)
   - Track first-attempt completion awards to prevent duplicates
@@ -16,7 +27,7 @@ Prompt to run:
 
 ---
 
-## Phase 2 — Extend backend APIs for completion gems (building on existing quiz APIs) ✅ PENDING
+## Phase 2 — Extend backend APIs for completion gems (building on existing quiz APIs) ✅ COMPLETED
 - [ ] Extend existing quiz submission logic
   - Build on Phase 4 quiz APIs and Phase 9 gem system
   - Add completion gem awards alongside existing quiz gems
@@ -33,9 +44,8 @@ Prompt to run:
 
 ---
 
-## Phase 3 — Transform existing dashboard to interactive course cards ✅ PENDING
-- [ ] Enhance existing Dashboard "Learning Progress" from Phase 9
-  - Transform current progress display into card-based layout
+## Phase 3 — Transform Courses tab to interactive course cards ✅ completed
+- [ ] Enhance Courses tab list to card-based layout
   - Each card shows: course title, description, detailed progress bar, unit count (e.g., "8 of 12 Chapters completed")
 - [ ] Build on existing progress calculation
   - Enhance current unit completion tracking to show detailed percentages
@@ -49,7 +59,7 @@ Prompt to run:
 
 ---
 
-## Phase 4 — Add expandable unit dropdown to course cards (building on existing course detail) ✅ PENDING
+## Phase 4 — Add expandable unit dropdown to course cards in Courses tab (building on existing course detail) ✅ completed
 - [ ] Extend course cards with expandable functionality
   - Click card to toggle dropdown showing units list (build on existing unit rendering from Phase 8)
   - Smooth expand/collapse animation
@@ -62,11 +72,11 @@ Prompt to run:
   - Display quiz completion status alongside unit status
 
 Prompt to run:
-"Add expandable dropdown to course cards showing units with completion status and quiz attachments, building on existing course detail view from Phase 8."
+"In the Courses tab, add expandable dropdown to course cards showing units with completion status and quiz attachments, building on existing course detail view from Phase 8."
 
 ---
 
-## Phase 5 — Add completion tracking to existing PageViewer ✅ PENDING
+## Phase 5 — Add completion tracking to existing PageViewer ✅ completed
 - [ ] Extend existing PageViewer from Phase 8
   - Build on current HTML/media display and navigation
   - Track page reading progress and completion
@@ -157,9 +167,9 @@ Prompt to run:
 ---
 
 ## Success Criteria
-- [ ] Existing structured courses system enhanced with interactive card-based dashboard
+- [ ] Existing structured courses system enhanced with interactive card-based Courses tab
 - [ ] Course cards show detailed progress (e.g., "8 of 12 Chapters completed") building on existing progress tracking
-- [ ] Clicking cards reveals expandable unit list with completion status and quiz attachments
+- [ ] Clicking cards reveals expandable unit list with completion status and quiz attachments within Courses tab
 - [ ] Users earn 3 gems per unit/page completion (first attempt only, separate from quiz gems)
 - [ ] Completion celebrations with confetti popup congratulating users and showing gem awards
 - [ ] Quiz integration enhanced within expandable cards, building on existing quiz system

@@ -75,6 +75,10 @@ const moduleSchema = new mongoose.Schema({
     }
   }],
   pages: [pageSchema],
+  isPublished: {
+    type: Boolean,
+    default: false
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -114,6 +118,10 @@ const courseSchema = new mongoose.Schema({
       trim: true
     }],
     faculties: [{
+      type: String,
+      trim: true
+    }],
+    departments: [{
       type: String,
       trim: true
     }],
@@ -171,8 +179,9 @@ const courseSchema = new mongoose.Schema({
     lowercase: true
   }],
   createdBy: {
-    type: String,
-    default: 'admin'
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
   },
   createdAt: {
     type: Date,
@@ -196,6 +205,7 @@ courseSchema.index({ enrollmentCount: -1 });
 // Audience filtering indexes
 courseSchema.index({ 'audience.universities': 1 });
 courseSchema.index({ 'audience.faculties': 1 });
+courseSchema.index({ 'audience.departments': 1 });
 courseSchema.index({ 'audience.levels': 1 });
 
 // Virtual for total modules count
@@ -234,66 +244,57 @@ courseSchema.methods.getProgress = function(userCompletedModules) {
 };
 
 // Method to get detailed course progress using completion gems tracking
-courseSchema.methods.getDetailedProgress = function(userCompletionGems) {
+// NOTE: Pages are NOT tracked - only module completion is tracked
+// options.visibleModules: optional array of modules to use instead of this.modules (e.g., published only)
+courseSchema.methods.getDetailedProgress = function(userCompletionGems, options = {}) {
+  const { visibleModules } = options;
+
   const courseCompletionGems = userCompletionGems.find(completion =>
     completion.courseId.toString() === this._id.toString()
   );
 
   const completedUnits = courseCompletionGems?.completedUnits || [];
-  const completedPages = courseCompletionGems?.completedPages || [];
 
-  // Calculate unit progress
-  const totalUnits = this.modules?.length || 0;
-  const completedUnitCount = this.modules?.filter(module =>
-    completedUnits.some(unitId => unitId.toString() === module._id.toString())
-  ).length || 0;
+  const modulesForProgress = Array.isArray(visibleModules) ? visibleModules : (this.modules || []);
 
-  // Calculate page progress
-  const allPages = this.modules?.flatMap(module => module.pages || []) || [];
-  const totalPages = allPages.length;
-  const completedPageCount = allPages.filter(page =>
-    completedPages.some(pageId => pageId.toString() === page._id.toString())
-  ).length;
-
-  // Get unit details with completion status
-  const unitDetails = this.modules?.map(module => {
+  // Get unit details with completion status (based ONLY on module completion, not pages)
+  const unitDetails = modulesForProgress.map(module => {
+    const unitPages = module.pages || [];
+    
+    // Unit is completed ONLY if explicitly in completedUnits array
+    // This happens when user clicks "End Module" and receives 3 gems
     const isCompleted = completedUnits.some(unitId =>
       unitId.toString() === module._id.toString()
     );
-
-    // Count completed pages in this unit
-    const unitPages = module.pages || [];
-    const completedUnitPages = unitPages.filter(page =>
-      completedPages.some(pageId => pageId.toString() === page._id.toString())
-    ).length;
 
     return {
       unitId: module._id,
       title: module.title,
       isCompleted,
       totalPages: unitPages.length,
-      completedPages: completedUnitPages,
-      progressPercentage: unitPages.length > 0 ? Math.round((completedUnitPages / unitPages.length) * 100) : 0
+      // Pages are not tracked - show total only, not completion
+      progressPercentage: isCompleted ? 100 : 0
     };
   }) || [];
+
+  // Calculate unit progress based on module completion only
+  const totalUnits = modulesForProgress.length;
+  const completedUnitCount = unitDetails.filter(unit => unit.isCompleted).length;
 
   return {
     courseId: this._id,
     courseTitle: this.title,
     totalUnits,
     completedUnits: completedUnitCount,
-    totalPages,
-    completedPages: completedPageCount,
     unitProgressPercentage: totalUnits > 0 ? Math.round((completedUnitCount / totalUnits) * 100) : 0,
-    pageProgressPercentage: totalPages > 0 ? Math.round((completedPageCount / totalPages) * 100) : 0,
-    overallProgressPercentage: totalPages > 0 ? Math.round((completedPageCount / totalPages) * 100) : 0,
-    isCompleted: completedPageCount === totalPages && totalPages > 0,
+    overallProgressPercentage: totalUnits > 0 ? Math.round((completedUnitCount / totalUnits) * 100) : 0,
+    isCompleted: completedUnitCount === totalUnits && totalUnits > 0,
     unitDetails,
     unitLabel: this.structure?.unitLabel || 'Module'
   };
 };
 
-// Method to get page progress for a specific unit
+// Method to get page info for a specific unit (NO tracking - just shows total pages)
 courseSchema.methods.getUnitPageProgress = function(unitId, userCompletionGems) {
   const module = this.modules.find(m => m._id.toString() === unitId.toString());
   if (!module) return null;
@@ -302,23 +303,27 @@ courseSchema.methods.getUnitPageProgress = function(unitId, userCompletionGems) 
     completion.courseId.toString() === this._id.toString()
   );
 
-  const completedPages = courseCompletionGems?.completedPages || [];
+  const completedUnits = courseCompletionGems?.completedUnits || [];
+  
+  // Check if the unit itself is completed (not individual pages)
+  const isUnitCompleted = completedUnits.some(unitIdObj =>
+    unitIdObj.toString() === module._id.toString()
+  );
 
   const pageDetails = module.pages?.map(page => ({
     pageId: page._id,
     title: page.title,
     order: page.order,
-    isCompleted: completedPages.some(pageId => pageId.toString() === page._id.toString())
+    // Pages are not tracked individually - only show if whole unit is complete
+    isCompleted: false // Pages are not tracked
   })) || [];
-
-  const completedPageCount = pageDetails.filter(page => page.isCompleted).length;
 
   return {
     unitId: module._id,
     unitTitle: module.title,
     totalPages: pageDetails.length,
-    completedPages: completedPageCount,
-    progressPercentage: pageDetails.length > 0 ? Math.round((completedPageCount / pageDetails.length) * 100) : 0,
+    isUnitCompleted, // Only track unit completion, not individual pages
+    progressPercentage: isUnitCompleted ? 100 : 0,
     pageDetails
   };
 };
@@ -338,9 +343,16 @@ courseSchema.methods.getNextModule = function(userCompletedModules) {
   return null; // All modules completed
 };
 
-// Pre-save middleware to update timestamps
+// Pre-save middleware to update timestamps and set unitLabel based on unitType
 courseSchema.pre('save', function(next) {
   this.updatedAt = new Date();
+
+  // Always ensure unitLabel matches unitType
+  if (this.structure && this.structure.unitType) {
+    const expectedLabel = this.structure.unitType.charAt(0).toUpperCase() + this.structure.unitType.slice(1);
+    this.structure.unitLabel = expectedLabel;
+  }
+
   next();
 });
 

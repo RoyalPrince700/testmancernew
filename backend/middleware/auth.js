@@ -3,18 +3,13 @@ import User from '../models/User.js';
 
 export const protect = async (req, res, next) => {
   try {
-    console.log('Auth middleware called for:', req.method, req.path);
-    console.log('Authorization header:', req.headers.authorization);
-    
     let token;
 
     if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
       token = req.headers.authorization.split(' ')[1];
-      console.log('Token extracted:', token.substring(0, 20) + '...');
     }
 
     if (!token) {
-      console.log('No token found in request');
       return res.status(401).json({
         success: false,
         message: 'Not authorized to access this route'
@@ -23,8 +18,7 @@ export const protect = async (req, res, next) => {
 
     try {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'default-secret-key-change-in-production');
-      console.log('Token decoded successfully:', decoded);
-      
+
       const user = await User.findById(decoded.userId);
       if (!user) {
         console.error('User not found for decoded userId:', decoded.userId);
@@ -33,8 +27,7 @@ export const protect = async (req, res, next) => {
           message: 'User not found'
         });
       }
-      
-      console.log('User found in middleware:', user.email);
+
       req.user = { userId: decoded.userId, ...user.toObject() };
       next();
     } catch (error) {

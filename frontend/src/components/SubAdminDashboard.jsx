@@ -19,7 +19,7 @@ import {
 } from './subadmin';
 
 const SubAdminDashboard = () => {
-  const { user, canManageCourses, assignedUniversities, assignedFaculties, assignedLevels } = useAuth();
+  const { user, canManageCourses, assignedUniversities, assignedFaculties, assignedLevels, assignedDepartments } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -94,32 +94,6 @@ const SubAdminDashboard = () => {
             )}
           </div>
 
-          {/* Assignment Scope */}
-          {sidebarOpen && (
-            <div className="px-4 py-3 border-b border-gray-200 bg-gray-50 flex-shrink-0">
-              <p className="text-[11px] font-semibold text-gray-500 uppercase mb-2">Your Scope</p>
-              <div className="space-y-1 text-xs">
-                {assignedUniversities.length > 0 && (
-                  <div className="flex items-center">
-                    <MdSchool className="w-3 h-3 mr-2 text-gray-400" />
-                    <span className="text-gray-600">{assignedUniversities.length} University(ies)</span>
-                  </div>
-                )}
-                {assignedFaculties.length > 0 && (
-                  <div className="flex items-center">
-                    <MdAccountBalance className="w-3 h-3 mr-2 text-gray-400" />
-                    <span className="text-gray-600">{assignedFaculties.length} Faculty(ies)</span>
-                  </div>
-                )}
-                {assignedLevels.length > 0 && (
-                  <div className="flex items-center">
-                    <MdGrade className="w-3 h-3 mr-2 text-gray-400" />
-                    <span className="text-gray-600">{assignedLevels.length} Level(s)</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Navigation - Scrollable */}
           <nav className="flex-1 px-2 py-3 space-y-6 overflow-y-auto">

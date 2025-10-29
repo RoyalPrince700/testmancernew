@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminApi } from '../../utils/adminApi';
-import { NIGERIAN_UNIVERSITIES, FACULTIES, LEVELS } from '../../utils/constants';
+import { NIGERIAN_UNIVERSITIES, FACULTIES, LEVELS, DEPARTMENTS } from '../../utils/constants';
 import { toast } from 'react-hot-toast';
 
 const UsersManagement = () => {
@@ -111,8 +111,11 @@ const UsersManagement = () => {
                       {user.assignedFaculties?.length > 0 && (
                         <span> {user.assignedUniversities?.length ? '|' : ''} Faculties: {user.assignedFaculties.join(', ')}</span>
                       )}
+                      {user.assignedDepartments?.length > 0 && (
+                        <span> {(user.assignedUniversities?.length || user.assignedFaculties?.length) ? '|' : ''} Departments: {user.assignedDepartments.join(', ')}</span>
+                      )}
                       {user.assignedLevels?.length > 0 && (
-                        <span> {(user.assignedUniversities?.length || user.assignedFaculties?.length) ? '|' : ''} Levels: {user.assignedLevels.join(', ')}</span>
+                        <span> {(user.assignedUniversities?.length || user.assignedFaculties?.length || user.assignedDepartments?.length) ? '|' : ''} Levels: {user.assignedLevels.join(', ')}</span>
                       )}
                     </div>
                   )}
@@ -144,7 +147,8 @@ const RoleChangeModal = ({ user, onClose, onSubmit }) => {
   const [assignments, setAssignments] = useState({
     assignedUniversities: user.assignedUniversities || [],
     assignedFaculties: user.assignedFaculties || [],
-    assignedLevels: user.assignedLevels || []
+    assignedLevels: user.assignedLevels || [],
+    assignedDepartments: user.assignedDepartments || []
   });
 
   const handleSubmit = (e) => {
@@ -201,13 +205,33 @@ const RoleChangeModal = ({ user, onClose, onSubmit }) => {
                   value={assignments.assignedFaculties[0] || ''}
                   onChange={(e) => setAssignments({
                     ...assignments,
-                    assignedFaculties: e.target.value ? [e.target.value] : []
+                    assignedFaculties: e.target.value ? [e.target.value] : [],
+                    assignedDepartments: [] // Clear departments when faculty changes
                   })}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select faculty</option>
                   {FACULTIES.map((f) => (
                     <option key={f} value={f}>{f}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Assigned Department</label>
+                <select
+                  value={assignments.assignedDepartments[0] || ''}
+                  onChange={(e) => setAssignments({
+                    ...assignments,
+                    assignedDepartments: e.target.value ? [e.target.value] : []
+                  })}
+                  disabled={!assignments.assignedFaculties[0]}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+                >
+                  <option value="">
+                    {assignments.assignedFaculties[0] ? 'Select department' : 'Select faculty first'}
+                  </option>
+                  {assignments.assignedFaculties[0] && DEPARTMENTS[assignments.assignedFaculties[0]]?.map((dept) => (
+                    <option key={dept} value={dept}>{dept}</option>
                   ))}
                 </select>
               </div>

@@ -2,17 +2,22 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
-import { MdAdd, MdEdit, MdDelete, MdSearch, MdFilterList, MdMenuBook, MdClose, MdSettings, MdQuiz } from 'react-icons/md';
+import { MdAdd, MdEdit, MdDelete, MdSearch, MdFilterList, MdMenuBook, MdClose, MdSettings, MdQuiz, MdPublish, MdUnpublished, MdVisibility } from 'react-icons/md';
 import MediaUpload from '../MediaUpload';
 import QuizBuilder from './QuizBuilder';
 
 const SubAdminCoursesManagement = () => {
-  const { user, assignedUniversities, assignedFaculties, assignedLevels } = useAuth();
+  const { user, assignedUniversities, assignedFaculties, assignedDepartments, assignedLevels } = useAuth();
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  // Helper function to get unitLabel from unitType
+  const getUnitLabel = (unitType) => {
+    return unitType.charAt(0).toUpperCase() + unitType.slice(1);
+  };
+
   const [courseForm, setCourseForm] = useState({
     title: '',
     courseCode: '',
@@ -20,7 +25,7 @@ const SubAdminCoursesManagement = () => {
     units: 1, // Keep for backward compatibility
     structure: {
       unitType: 'module',
-      unitLabel: 'Module',
+      unitLabel: getUnitLabel('module'),
       unitCount: 1
     }
   });
@@ -53,24 +58,22 @@ const SubAdminCoursesManagement = () => {
     try {
       // Auto-populate audience based on subadmin's assigned scope
       const courseData = {
-        ...courseForm,
+        title: courseForm.title,
+        courseCode: courseForm.courseCode,
+        description: courseForm.description,
+        // Map unitCount to units for backward compatibility (cap at 5 for old field)
+        units: Math.min(courseForm.structure.unitCount, 5),
         audience: {
           universities: assignedUniversities || [],
           faculties: assignedFaculties || [],
+          departments: assignedDepartments || [],
           levels: assignedLevels || []
         },
-        // Map unitCount to units for backward compatibility (cap at 5 for old field)
-        units: Math.min(courseForm.structure.unitCount, 5),
         structure: courseForm.structure
       };
-      // Remove structure from the spread to avoid duplication
-      delete courseData.structure;
 
       const response = await axios.post('/api/courses/admin/courses', courseData);
       toast.success('Course created successfully!');
-
-      // TODO: Phase 6 - Navigate to Manage Units view
-      toast('Next: Manage Units for this course (Phase 6)', { duration: 3000 });
 
       setCourses([...courses, response.data.course]);
       setShowCreateForm(false);
@@ -81,7 +84,7 @@ const SubAdminCoursesManagement = () => {
         units: 1,
         structure: {
           unitType: 'module',
-          unitLabel: 'Module',
+          unitLabel: getUnitLabel('module'),
           unitCount: 1
         }
       });
@@ -271,7 +274,7 @@ const SubAdminCoursesManagement = () => {
                   value={courseForm.structure.unitType}
                   onChange={(e) => {
                     const unitType = e.target.value;
-                    const unitLabel = unitType.charAt(0).toUpperCase() + unitType.slice(1);
+                    const unitLabel = getUnitLabel(unitType);
                     setCourseForm({
                       ...courseForm,
                       structure: {
@@ -456,6 +459,8 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
   const [quizBuilderConfig, setQuizBuilderConfig] = useState(null);
   const [unitQuizzes, setUnitQuizzes] = useState({});
   const [pageQuizzes, setPageQuizzes] = useState({});
+  const [showPagePreview, setShowPagePreview] = useState(false);
+  const [previewPage, setPreviewPage] = useState(null);
   const [unitForm, setUnitForm] = useState({
     title: '',
     description: '',
@@ -470,13 +475,18 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
     videoUrl: '',
     attachments: []
   });
+  const [editingPage, setEditingPage] = useState(null);
 
-  const handleAudioUpload = (url) => {
-    setPageForm(prev => ({ ...prev, audioUrl: url }));
+  const handleAudioUpload = (uploadData) => {
+    // uploadData is an object with {url, publicId, bytes, duration, format}
+    // We need just the url string for the form
+    setPageForm(prev => ({ ...prev, audioUrl: uploadData.url }));
   };
 
-  const handleVideoUpload = (url) => {
-    setPageForm(prev => ({ ...prev, videoUrl: url }));
+  const handleVideoUpload = (uploadData) => {
+    // uploadData is an object with {url, publicId, bytes, duration, format}
+    // We need just the url string for the form
+    setPageForm(prev => ({ ...prev, videoUrl: uploadData.url }));
   };
 
   useEffect(() => {
@@ -534,14 +544,27 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
   const handlePageSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(
-        `/api/courses/admin/courses/${course._id}/modules/${selectedUnit}/pages`,
-        pageForm
-      );
-      toast.success('Page created successfully!');
+      let response;
+      if (editingPage) {
+        // Update existing page
+        response = await axios.put(
+          `/api/courses/admin/courses/${course._id}/modules/${selectedUnit}/pages/${editingPage._id}`,
+          pageForm
+        );
+        toast.success('Page updated successfully!');
+      } else {
+        // Create new page
+        response = await axios.post(
+          `/api/courses/admin/courses/${course._id}/modules/${selectedUnit}/pages`,
+          pageForm
+        );
+        toast.success('Page created successfully!');
+      }
+
       // Reload units to get updated data
       await loadUnits();
       setShowPageForm(false);
+      setEditingPage(null);
       setPageForm({
         title: '',
         order: 1,
@@ -551,8 +574,8 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
         attachments: []
       });
     } catch (error) {
-      console.error('Failed to create page:', error);
-      toast.error(error.response?.data?.message || 'Failed to create page');
+      console.error('Failed to save page:', error);
+      toast.error(error.response?.data?.message || `Failed to ${editingPage ? 'update' : 'create'} page`);
     }
   };
 
@@ -631,7 +654,64 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
     }
   };
 
-  const unitLabel = course.structure?.unitLabel || 'Unit';
+  const handlePreviewPage = (page, unit) => {
+    setPreviewPage({ ...page, unitTitle: unit.title });
+    setShowPagePreview(true);
+  };
+
+  const handleEditPage = (page) => {
+    setEditingPage(page);
+    setPageForm({
+      title: page.title,
+      order: page.order,
+      html: page.html || '',
+      audioUrl: page.audioUrl || '',
+      videoUrl: page.videoUrl || '',
+      attachments: page.attachments || []
+    });
+    setShowPageForm(true);
+  };
+
+  const handlePublishUnit = async (unitId) => {
+    try {
+      const response = await axios.post(`/api/courses/admin/courses/${course._id}/units/${unitId}/publish`);
+      toast.success('Unit published successfully!');
+
+      // Update the unit in the local state
+      setUnits(units.map(unit =>
+        unit._id === unitId
+          ? { ...unit, isPublished: true }
+          : unit
+      ));
+    } catch (error) {
+      console.error('Failed to publish unit:', error);
+      toast.error(error.response?.data?.message || 'Failed to publish unit');
+    }
+  };
+
+  const handleUnpublishUnit = async (unitId) => {
+    if (!window.confirm('Are you sure you want to unpublish this unit? Users will no longer see it.')) {
+      return;
+    }
+
+    try {
+      const response = await axios.post(`/api/courses/admin/courses/${course._id}/units/${unitId}/unpublish`);
+      toast.success('Unit unpublished successfully!');
+
+      // Update the unit in the local state
+      setUnits(units.map(unit =>
+        unit._id === unitId
+          ? { ...unit, isPublished: false }
+          : unit
+      ));
+    } catch (error) {
+      console.error('Failed to unpublish unit:', error);
+      toast.error(error.response?.data?.message || 'Failed to unpublish unit');
+    }
+  };
+
+  const unitLabel = course.structure?.unitLabel || course.structure?.unitType ?
+    course.structure.unitType.charAt(0).toUpperCase() + course.structure.unitType.slice(1) : 'Module';
 
   if (loading) {
     return (
@@ -797,6 +877,13 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
                       <span>Order: {unit.order}</span>
                       <span>Time: {unit.estimatedTime}min</span>
                       <span>Pages: {unit.pages?.length || 0}</span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${
+                        unit.isPublished
+                          ? 'bg-green-100 text-green-800'
+                          : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                        {unit.isPublished ? 'Published' : 'Draft'}
+                      </span>
                     </div>
                     {unitQuizzes[unit._id] && (
                       <div className="mt-2 text-sm text-purple-600 bg-purple-50 px-3 py-1 rounded inline-flex items-center">
@@ -839,6 +926,26 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
                       <MdQuiz className="w-4 h-4 mr-1" />
                       Add Quiz
                     </button>
+                    {unit.isPublished ? (
+                      <button
+                        onClick={() => handleUnpublishUnit(unit._id)}
+                        className="bg-orange-600 text-white px-3 py-2 rounded-lg hover:bg-orange-700 transition-colors text-sm flex items-center"
+                        title="Unpublish this unit"
+                      >
+                        <MdUnpublished className="w-4 h-4 mr-1" />
+                        Unpublish
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => handlePublishUnit(unit._id)}
+                        className="bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors text-sm flex items-center"
+                        title="Publish this unit to make it visible to users"
+                        disabled={!unit.pages || unit.pages.length === 0}
+                      >
+                        <MdPublish className="w-4 h-4 mr-1" />
+                        Publish
+                      </button>
+                    )}
                     <button
                       onClick={() => handleDeleteUnit(unit._id)}
                       className="bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition-colors text-sm"
@@ -865,7 +972,7 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
                     {/* Page Form */}
                     {showPageForm && (
                       <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                        <h5 className="font-medium mb-3">Create New Page</h5>
+                        <h5 className="font-medium mb-3">{editingPage ? 'Edit Page' : 'Create New Page'}</h5>
                         <form onSubmit={handlePageSubmit} className="space-y-3">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             <input
@@ -923,11 +1030,22 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
                               type="submit"
                               className="bg-green-600 text-white px-4 py-2 rounded text-sm hover:bg-green-700"
                             >
-                              Create Page
+                              {editingPage ? 'Update Page' : 'Create Page'}
                             </button>
                             <button
                               type="button"
-                              onClick={() => setShowPageForm(false)}
+                              onClick={() => {
+                                setShowPageForm(false);
+                                setEditingPage(null);
+                                setPageForm({
+                                  title: '',
+                                  order: 1,
+                                  html: '',
+                                  audioUrl: '',
+                                  videoUrl: '',
+                                  attachments: []
+                                });
+                              }}
                               className="bg-gray-600 text-white px-4 py-2 rounded text-sm hover:bg-gray-700"
                             >
                               Cancel
@@ -964,6 +1082,20 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
                                   )}
                                 </div>
                                 <div className="flex gap-2 ml-4">
+                                  <button
+                                    onClick={() => handlePreviewPage(page, unit)}
+                                    className="text-blue-600 hover:text-blue-800 text-sm px-2 py-1 border border-blue-200 rounded hover:bg-blue-50"
+                                    title="Preview Page"
+                                  >
+                                    <MdVisibility className="w-4 h-4" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleEditPage(page)}
+                                    className="text-green-600 hover:text-green-800 text-sm px-2 py-1 border border-green-200 rounded hover:bg-green-50"
+                                    title="Edit Page"
+                                  >
+                                    <MdEdit className="w-4 h-4" />
+                                  </button>
                                   {!pageQuiz ? (
                                     <button
                                       onClick={() => openQuizBuilder('page', unit._id, page.order)}
@@ -1026,6 +1158,108 @@ const CourseManager = ({ course, onBack, onUpdate }) => {
           }}
           onSave={handleQuizSave}
         />
+      )}
+
+      {/* Page Preview Modal */}
+      {showPagePreview && previewPage && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full mx-4 max-h-[90vh] overflow-hidden">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Page Preview</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {previewPage.unitTitle} → {previewPage.title}
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowPagePreview(false);
+                  setPreviewPage(null);
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <MdClose className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-120px)]">
+              {/* Page Header */}
+              <div className="mb-6">
+                <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white p-4 rounded-lg">
+                  <h1 className="text-2xl font-bold">{previewPage.title}</h1>
+                  <p className="text-blue-100 mt-1">Course: {course.title}</p>
+                </div>
+              </div>
+
+              {/* Page Content */}
+              <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                {previewPage.html ? (
+                  <div
+                    className="prose prose-sm max-w-none"
+                    dangerouslySetInnerHTML={{ __html: previewPage.html }}
+                  />
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <MdMenuBook className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                    <p>No content added to this page yet.</p>
+                  </div>
+                )}
+              </div>
+
+              {/* Media Section */}
+              {(previewPage.audioUrl || previewPage.videoUrl) && (
+                <div className="mt-6 bg-gray-50 border border-gray-200 rounded-lg p-6">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Media Content</h3>
+                  <div className="space-y-4">
+                    {previewPage.audioUrl && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Audio:</h4>
+                        <audio controls className="w-full">
+                          <source src={previewPage.audioUrl} type="audio/mpeg" />
+                          Your browser does not support the audio element.
+                        </audio>
+                      </div>
+                    )}
+                    {previewPage.videoUrl && (
+                      <div>
+                        <h4 className="text-sm font-medium text-gray-700 mb-2">Video:</h4>
+                        <video controls className="w-full max-w-2xl rounded-lg">
+                          <source src={previewPage.videoUrl} type="video/mp4" />
+                          Your browser does not support the video element.
+                        </video>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Preview Notice */}
+              <div className="mt-6 bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex items-center">
+                  <MdVisibility className="w-5 h-5 text-yellow-600 mr-2" />
+                  <div>
+                    <h4 className="text-sm font-medium text-yellow-800">Preview Mode</h4>
+                    <p className="text-sm text-yellow-700 mt-1">
+                      This is how the page will appear to students once published. Make sure all content is ready before publishing the unit.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 p-6 border-t border-gray-200 bg-gray-50">
+              <button
+                onClick={() => {
+                  setShowPagePreview(false);
+                  setPreviewPage(null);
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

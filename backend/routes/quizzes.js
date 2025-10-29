@@ -16,14 +16,13 @@ const createQuizSchema = Joi.object({
     question: Joi.string().trim().min(10).max(500).required(),
     options: Joi.array().items(Joi.string().trim().min(1).max(200)).length(4).required(),
     correctAnswer: Joi.number().integer().min(0).max(3).required(),
-    explanation: Joi.string().trim().min(10).max(500).optional()
+    explanation: Joi.string().trim().min(10).max(500).optional(),
+    points: Joi.number().integer().min(1).optional(),
+    difficulty: Joi.string().valid('easy', 'medium', 'hard').optional(),
+    tags: Joi.array().items(Joi.string().trim().lowercase()).optional()
   })).min(1).max(50).required(),
   trigger: Joi.string().valid('unit', 'page').required(),
-  moduleId: Joi.when('trigger', {
-    is: 'unit',
-    then: Joi.string().hex().length(24).required(),
-    otherwise: Joi.forbidden()
-  }),
+  moduleId: Joi.string().hex().length(24).required(), // Required for both unit and page quizzes
   pageOrder: Joi.when('trigger', {
     is: 'page',
     then: Joi.number().integer().min(1).required(),
@@ -42,17 +41,16 @@ const updateQuizSchema = Joi.object({
     question: Joi.string().trim().min(10).max(500).required(),
     options: Joi.array().items(Joi.string().trim().min(1).max(200)).length(4).required(),
     correctAnswer: Joi.number().integer().min(0).max(3).required(),
-    explanation: Joi.string().trim().min(10).max(500).optional()
+    explanation: Joi.string().trim().min(10).max(500).optional(),
+    points: Joi.number().integer().min(1).optional(),
+    difficulty: Joi.string().valid('easy', 'medium', 'hard').optional(),
+    tags: Joi.array().items(Joi.string().trim().lowercase()).optional()
   })).min(1).max(50).optional(),
   trigger: Joi.string().valid('unit', 'page').optional(),
-  moduleId: Joi.when('trigger', {
-    is: 'unit',
-    then: Joi.string().hex().length(24).required(),
-    otherwise: Joi.forbidden()
-  }),
+  moduleId: Joi.string().hex().length(24).optional(),
   pageOrder: Joi.when('trigger', {
     is: 'page',
-    then: Joi.number().integer().min(1).required(),
+    then: Joi.number().integer().min(1).optional(),
     otherwise: Joi.forbidden()
   }),
   timeLimit: Joi.number().integer().min(1).max(3600).optional(),
@@ -222,33 +220,22 @@ router.post('/:id/submit', authenticateToken, async (req, res) => {
 
     if (passed) {
       try {
-        // If this is a unit-level quiz, award unit completion gem
+        // If this is a unit-level quiz, award unit completion gem (3 gems)
         if (quiz.trigger === 'unit' && quiz.moduleId) {
-          const unitAwarded = await user.recordCompletionGemForUnit(quiz.courseId, quiz.moduleId);
-          if (unitAwarded) {
+          // Check if this is the first time completing this unit
+          const alreadyCompleted = user.hasEarnedCompletionGemForUnit(quiz.courseId, quiz.moduleId);
+          if (!alreadyCompleted) {
+            // Record unit completion and award 3 gems
+            // NO page tracking - unit completion is independent of pages
+            await user.recordCompletionGemForUnit(quiz.courseId, quiz.moduleId);
             gemsEarned += 3; // Add the unit completion gems to the total
           }
         }
-        // If this is a page-level quiz, award page completion gem
-        else if (quiz.trigger === 'page' && quiz.pageOrder) {
-          // Find the specific page ID that corresponds to this pageOrder in the module
-          const course = await Course.findById(quiz.courseId);
-          if (course) {
-            const module = course.modules.id(quiz.moduleId);
-            if (module && module.pages) {
-              const page = module.pages.find(p => p.order === quiz.pageOrder);
-              if (page) {
-                const pageAwarded = await user.recordCompletionGemForPage(quiz.courseId, page._id);
-                if (pageAwarded) {
-                  gemsEarned += 3; // Add the page completion gems to the total
-                }
-              }
-            }
-          }
-        }
+        // Page-level quizzes don't trigger any completion tracking
+        // Only award gems for correct answers, not for completion
       } catch (completionError) {
-        console.warn('Error awarding completion gems:', completionError);
-        // Don't fail the quiz submission if completion gem awarding fails
+        console.warn('Error recording completion:', completionError);
+        // Don't fail the quiz submission if completion tracking fails
       }
     }
 

@@ -2,6 +2,7 @@ import express from 'express';
 import Course from '../models/Course.js';
 import User from '../models/User.js';
 import Quiz from '../models/Quiz.js';
+import { markUnitComplete, getDetailedCourseProgress } from '../services/progressService.js';
 import { authenticateToken, requirePermission } from '../middleware/auth.js';
 import Joi from 'joi';
 import sanitizeHtml from 'sanitize-html';
@@ -20,58 +21,67 @@ router.get('/', authenticateToken, async (req, res) => {
 
 // Note: /goal/:goal endpoint removed - learning goals no longer part of course structure
 
-// Get personalized courses for user based on their learning categories
+// Get personalized courses for user based on their academic profile
 router.get('/personalized', authenticateToken, async (req, res) => {
   try {
     const userId = req.user.userId;
     const user = await User.findById(userId);
-    const { category } = req.query;
 
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Build filter based on user's profile
-    let filter = {
-      isActive: true
-    };
+    // Build filter based on user's academic profile and allow public courses
+    const filter = { isActive: true };
 
-    // For undergraduate users, filter by audience (university/faculty/level)
-    if (user.isUndergraduate && (user.university || user.faculty || user.level)) {
-      // Build audience matching conditions
-      const audienceConditions = [];
+    // Only apply audience scoping when user is in undergraduate/post-UTME path
+    const shouldApplyAudienceScope = Boolean(user.isUndergraduate || user.learningCategories?.includes('undergraduate') || user.learningCategories?.includes('postutme'));
+    if (shouldApplyAudienceScope) {
+      const orConditions = [];
 
-      // Always include courses with no audience restriction (general courses)
-      audienceConditions.push({ 'audience': { $exists: false } });
-      audienceConditions.push({ 'audience': null });
-      audienceConditions.push({ 'audience': {} });
+      // Public/general courses: audience missing or all arrays empty
+      orConditions.push({ 
+        audience: { $exists: false } 
+      });
+      orConditions.push({ 
+        audience: null 
+      });
+      orConditions.push({ 
+        $and: [
+          { 'audience.universities': { $size: 0 } },
+          { 'audience.faculties': { $size: 0 } },
+          { 'audience.departments': { $size: 0 } },
+          { 'audience.levels': { $size: 0 } }
+        ]
+      });
 
-      // Add specific university/faculty/level matching
-      if (user.university || user.faculty || user.level) {
-        const specificMatch = {};
-        if (user.university) {
-          specificMatch['audience.universities'] = user.university;
-        }
-        if (user.faculty) {
-          specificMatch['audience.faculties'] = user.faculty;
-        }
-        if (user.level) {
-          specificMatch['audience.levels'] = user.level;
-        }
-        audienceConditions.push(specificMatch);
+      // Courses that STRICTLY match ALL of the user's profile
+      // ALL fields must match: university, faculty, department, AND level
+      if (user.university && user.faculty && user.department && user.level) {
+        orConditions.push({
+          $and: [
+            { 'audience.universities': { $in: [user.university] } },
+            { 'audience.faculties': { $in: [user.faculty] } },
+            { 'audience.departments': { $in: [user.department] } },
+            { 'audience.levels': { $in: [user.level] } }
+          ]
+        });
       }
 
-      filter.$or = audienceConditions;
+      filter.$or = orConditions;
     }
 
-    // Get courses that match the filters
-    console.log(`Fetching personalized courses with filter:`, filter);
+    // Get courses that match the filters and have at least one published module
     const courses = await Course.find(filter).populate('modules');
-    console.log(`Found ${courses.length} personalized courses:`, courses.map(c => ({ id: c._id, title: c.title })));
+
+    // Filter out courses with no published modules
+    const coursesWithPublishedModules = courses.filter(course => {
+      return course.modules.some(module => module.isPublished === true);
+    });
 
     // Add progress information for each course
     const coursesWithProgress = await Promise.all(
-      courses.map(async (course) => {
+      coursesWithPublishedModules.map(async (course) => {
         const progressResponse = await fetch(`${req.protocol}://${req.get('host')}/api/courses/progress/${course._id}`, {
           method: 'GET',
           headers: {
@@ -86,8 +96,12 @@ router.get('/personalized', authenticateToken, async (req, res) => {
           progress = progressData.progress;
         }
 
+        // Filter modules to only show published ones for regular users
+        const publishedModules = course.modules.filter(module => module.isPublished === true);
+
         return {
           ...course.toObject(),
+          modules: publishedModules,
           progress: progress
         };
       })
@@ -103,18 +117,11 @@ router.get('/personalized', authenticateToken, async (req, res) => {
 // Get course by ID with quiz attachments and progress
 router.get('/:id', authenticateToken, async (req, res) => {
   try {
-    console.log(`Fetching course with ID: ${req.params.id}`);
     const course = await Course.findById(req.params.id).populate('modules');
 
     if (!course) {
-      console.log(`Course not found: ${req.params.id}`);
-      // Check if course exists without population
-      const courseExists = await Course.findById(req.params.id);
-      console.log(`Course exists without population: ${!!courseExists}`);
       return res.status(404).json({ message: 'Course not found' });
     }
-
-    console.log(`Course found: ${course.title} (ID: ${course._id})`);
 
     // Get quizzes attached to this course
     const quizzes = await Quiz.find({
@@ -128,11 +135,15 @@ router.get('/:id', authenticateToken, async (req, res) => {
       return res.status(404).json({ message: 'User not found' });
     }
 
-    // Calculate progress using new detailed progress method
-    const progress = course.getDetailedProgress(user.completionGems);
+    // Determine visible modules based on role (regular users see only published)
+    const isAdminUser = req.user.role === 'admin' || req.user.role === 'subadmin' || req.user.role === 'waec_admin' || req.user.role === 'jamb_admin';
+    const visibleModules = isAdminUser ? course.modules : course.modules.filter(module => module.isPublished === true);
+
+    // Calculate progress using visible modules only
+    const progress = course.getDetailedProgress(user.completionGems, { visibleModules });
 
     // Enhance modules with quiz information
-    const modulesWithQuizzes = course.modules.map(module => {
+    const modulesWithQuizzes = visibleModules.map(module => {
       const moduleQuizzes = quizzes.filter(quiz =>
         quiz.moduleId?.toString() === module._id.toString()
       );
@@ -180,25 +191,19 @@ router.post('/:courseId/module/:moduleId/complete', authenticateToken, async (re
     const { courseId, moduleId } = req.params;
     const userId = req.user.userId;
 
-    // Check if user already completed this module
-    const user = await User.findById(userId);
-    const alreadyCompleted = user.completedModules.includes(moduleId);
-
-    if (alreadyCompleted) {
-      return res.status(400).json({ message: 'Module already completed' });
+    const result = await markUnitComplete({ userId, courseId, unitId: moduleId });
+    if (!result.ok) {
+      return res.status(result.status).json({ message: result.error });
     }
 
-    // Add module to completed modules and award gems
-    user.completedModules.push(moduleId);
-    user.gems += 3; // Award 3 gems for module completion
-    await user.save();
-
-    res.json({
-      message: 'Module completed successfully',
-      gemsAwarded: 3,
-      totalGems: user.gems
+    return res.status(result.status).json({
+      message: result.message,
+      gemsAwarded: result.gemsAwarded,
+      totalGems: result.totalGems,
+      progress: result.progress
     });
   } catch (error) {
+    console.error('Error marking module complete:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -208,29 +213,13 @@ router.get('/progress/:courseId', authenticateToken, async (req, res) => {
   try {
     const { courseId } = req.params;
     const userId = req.user.userId;
-
-    const user = await User.findById(userId);
-    const course = await Course.findById(courseId).populate('modules');
-
-    if (!course) {
-      return res.status(404).json({ message: 'Course not found' });
+    const result = await getDetailedCourseProgress({ userId, courseId });
+    if (!result.ok) {
+      return res.status(result.status).json({ message: result.error });
     }
-
-    const completedModules = user.completedModules.filter(moduleId =>
-      course.modules.some(module => module._id.toString() === moduleId.toString())
-    );
-
-    const progress = {
-      courseId,
-      courseName: course.title,
-      totalModules: course.modules.length,
-      completedModules: completedModules.length,
-      progressPercentage: Math.round((completedModules.length / course.modules.length) * 100),
-      completedModuleIds: completedModules
-    };
-
-    res.json({ progress });
+    return res.json({ progress: result.progress });
   } catch (error) {
+    console.error('Error fetching course progress:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
@@ -244,23 +233,40 @@ router.get('/admin/courses', authenticateToken, requirePermission('manage_course
 
     // Apply role-based filtering
     if (user.role === 'subadmin') {
-      // Subadmins can only see courses for their assigned universities/faculties/levels
-      if (user.assignedUniversities?.length || user.assignedFaculties?.length || user.assignedLevels?.length) {
-        filter.$or = [];
-
-        if (user.assignedUniversities?.length) {
-          filter.$or.push({ 'audience.universities': { $in: user.assignedUniversities } });
-        }
-        if (user.assignedFaculties?.length) {
-          filter.$or.push({ 'audience.faculties': { $in: user.assignedFaculties } });
-        }
-        if (user.assignedLevels?.length) {
-          filter.$or.push({ 'audience.levels': { $in: user.assignedLevels } });
-        }
-      } else {
-        // No assignments - return empty
-        return res.json({ courses: [] });
+      // Subadmins can only see courses within their scope
+      // Build filter based on their assignments
+      const orConditions = [];
+      
+      // Include public courses (empty audience)
+      orConditions.push({
+        $and: [
+          { $or: [{ 'audience.universities': { $size: 0 } }, { 'audience.universities': { $exists: false } }] },
+          { $or: [{ 'audience.faculties': { $size: 0 } }, { 'audience.faculties': { $exists: false } }] },
+          { $or: [{ 'audience.departments': { $size: 0 } }, { 'audience.departments': { $exists: false } }] },
+          { $or: [{ 'audience.levels': { $size: 0 } }, { 'audience.levels': { $exists: false } }] }
+        ]
+      });
+      
+      // Include courses matching their assignments
+      const matchConditions = [];
+      if (user.assignedUniversities?.length) {
+        matchConditions.push({ 'audience.universities': { $in: user.assignedUniversities } });
       }
+      if (user.assignedFaculties?.length) {
+        matchConditions.push({ 'audience.faculties': { $in: user.assignedFaculties } });
+      }
+      if (user.assignedDepartments?.length) {
+        matchConditions.push({ 'audience.departments': { $in: user.assignedDepartments } });
+      }
+      if (user.assignedLevels?.length) {
+        matchConditions.push({ 'audience.levels': { $in: user.assignedLevels } });
+      }
+      
+      if (matchConditions.length > 0) {
+        orConditions.push({ $and: matchConditions });
+      }
+      
+      filter.$or = orConditions;
     } else if (user.role === 'waec_admin') {
       // TODO: Re-implement category filtering based on new course structure
       // For now, category admins see all courses
@@ -272,7 +278,7 @@ router.get('/admin/courses', authenticateToken, requirePermission('manage_course
     }
     // Full admin sees all courses (no additional filter)
 
-    const courses = await Course.find(filter).populate('modules');
+    const courses = await Course.find(filter).populate('modules').populate('createdBy', 'name username role');
     res.json({ courses });
   } catch (error) {
     console.error('Error fetching admin courses:', error);
@@ -307,7 +313,8 @@ router.post('/admin/courses', authenticateToken, requirePermission('manage_cours
       units: courseData.units,
       tags: courseData.tags || [],
       audience: courseData.audience || {},
-      structure: courseData.structure || {}
+      structure: courseData.structure || {},
+      createdBy: user.userId
     });
 
     await course.save();
@@ -410,6 +417,7 @@ const courseSchema = Joi.object({
   audience: Joi.object({
     universities: Joi.array().items(Joi.string().trim()),
     faculties: Joi.array().items(Joi.string().trim()),
+    departments: Joi.array().items(Joi.string().trim()),
     levels: Joi.array().items(Joi.string().trim())
   }).optional(),
   structure: Joi.object({
@@ -428,6 +436,7 @@ const subadminCourseSchema = Joi.object({
   audience: Joi.object({
     universities: Joi.array().items(Joi.string().trim()),
     faculties: Joi.array().items(Joi.string().trim()),
+    departments: Joi.array().items(Joi.string().trim()),
     levels: Joi.array().items(Joi.string().trim())
   }).optional(),
   structure: Joi.object({
@@ -1026,9 +1035,94 @@ router.delete('/admin/courses/:courseId/units/:unitId', authenticateToken, requi
   }
 });
 
+// Publish unit
+router.post('/admin/courses/:courseId/units/:unitId/publish', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, unitId } = req.params;
+    const user = req.user;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot publish units for course outside your assigned scope'
+      });
+    }
+
+    const unit = course.modules.id(unitId);
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    // Check if unit has pages before allowing publish
+    if (!unit.pages || unit.pages.length === 0) {
+      return res.status(400).json({ message: 'Cannot publish unit without pages. Add pages first.' });
+    }
+
+    unit.isPublished = true;
+    await course.save();
+
+    res.json({
+      message: 'Unit published successfully',
+      unit: {
+        ...unit.toObject(),
+        unitType: course.structure?.unitType || 'module',
+        unitLabel: course.structure?.unitLabel || 'Module'
+      }
+    });
+  } catch (error) {
+    console.error('Error publishing unit:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Unpublish unit
+router.post('/admin/courses/:courseId/units/:unitId/unpublish', authenticateToken, requirePermission('manage_courses'), async (req, res) => {
+  try {
+    const { courseId, unitId } = req.params;
+    const user = req.user;
+
+    const course = await Course.findById(courseId);
+    if (!course) {
+      return res.status(404).json({ message: 'Course not found' });
+    }
+
+    // Validate scope
+    if (!validateCourseScope(user, course)) {
+      return res.status(403).json({
+        message: 'Cannot unpublish units for course outside your assigned scope'
+      });
+    }
+
+    const unit = course.modules.id(unitId);
+    if (!unit) {
+      return res.status(404).json({ message: 'Unit not found' });
+    }
+
+    unit.isPublished = false;
+    await course.save();
+
+    res.json({
+      message: 'Unit unpublished successfully',
+      unit: {
+        ...unit.toObject(),
+        unitType: course.structure?.unitType || 'module',
+        unitLabel: course.structure?.unitLabel || 'Module'
+      }
+    });
+  } catch (error) {
+    console.error('Error unpublishing unit:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Helper function to validate if a course is within an admin's scope
 function validateCourseScope(user, course) {
-  const { role, assignedUniversities, assignedFaculties, assignedLevels } = user;
+  const { role, assignedUniversities, assignedFaculties, assignedDepartments, assignedLevels } = user;
   const { audience } = course;
 
   // Full admin can manage all courses
@@ -1042,37 +1136,61 @@ function validateCourseScope(user, course) {
     return true;
   }
 
-  // Subadmin validation
+  // Subadmin validation - STRICT MATCHING
   if (role === 'subadmin') {
-    // Must have assignments
-    if (!assignedUniversities?.length && !assignedFaculties?.length && !assignedLevels?.length) {
-      return false;
-    }
-
     // Check if course audience matches assignments
     const courseUniversities = audience?.universities || [];
     const courseFaculties = audience?.faculties || [];
+    const courseDepartments = audience?.departments || [];
     const courseLevels = audience?.levels || [];
 
-    // If course has no audience restrictions (empty arrays), subadmins can create it
-    // This allows subadmins to create general courses accessible to all students
-    if (courseUniversities.length === 0 && courseFaculties.length === 0 && courseLevels.length === 0) {
+    // If course has no audience restrictions (all arrays empty), allow it
+    // This allows subadmins to create general/public courses
+    if (courseUniversities.length === 0 && courseFaculties.length === 0 && 
+        courseDepartments.length === 0 && courseLevels.length === 0) {
       return true;
     }
 
-    const universityMatch = assignedUniversities?.some(univ =>
-      courseUniversities.includes(univ)
-    );
+    // For scoped courses, validate based on what assignments the subadmin has
+    // During transition period, departments might not be assigned yet
+    const hasUniversityAssignment = assignedUniversities?.length > 0;
+    const hasFacultyAssignment = assignedFaculties?.length > 0;
+    const hasDepartmentAssignment = assignedDepartments?.length > 0;
+    const hasLevelAssignment = assignedLevels?.length > 0;
 
-    const facultyMatch = assignedFaculties?.some(fac =>
-      courseFaculties.includes(fac)
-    );
+    // If subadmin has no assignments at all, they can't create scoped courses
+    if (!hasUniversityAssignment && !hasFacultyAssignment && 
+        !hasDepartmentAssignment && !hasLevelAssignment) {
+      return false;
+    }
 
-    const levelMatch = assignedLevels?.some(level =>
-      courseLevels.includes(level)
-    );
+    // STRICT validation: ALL populated fields must match
+    // Check each field only if the subadmin has that assignment AND the course has that requirement
+    if (courseUniversities.length > 0) {
+      if (!hasUniversityAssignment) return false;
+      const match = assignedUniversities?.some(univ => courseUniversities.includes(univ));
+      if (!match) return false;
+    }
 
-    return universityMatch || facultyMatch || levelMatch;
+    if (courseFaculties.length > 0) {
+      if (!hasFacultyAssignment) return false;
+      const match = assignedFaculties?.some(fac => courseFaculties.includes(fac));
+      if (!match) return false;
+    }
+
+    if (courseDepartments.length > 0) {
+      if (!hasDepartmentAssignment) return false;
+      const match = assignedDepartments?.some(dept => courseDepartments.includes(dept));
+      if (!match) return false;
+    }
+
+    if (courseLevels.length > 0) {
+      if (!hasLevelAssignment) return false;
+      const match = assignedLevels?.some(level => courseLevels.includes(level));
+      if (!match) return false;
+    }
+
+    return true;
   }
 
   return false;

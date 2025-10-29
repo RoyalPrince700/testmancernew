@@ -13,7 +13,12 @@ const CoursesManagement = () => {
     description: '',
     tags: [],
     category: '',
-    audience: { universities: [], faculties: [], levels: [] }
+    audience: { universities: [], faculties: [], levels: [] },
+    structure: {
+      unitType: 'module',
+      unitLabel: 'Module',
+      unitCount: 1
+    }
   });
 
   useEffect(() => {
@@ -43,7 +48,12 @@ const CoursesManagement = () => {
         description: '',
         tags: [],
         category: '',
-        audience: { universities: [], faculties: [], levels: [] }
+        audience: { universities: [], faculties: [], levels: [] },
+        structure: {
+          unitType: 'module',
+          unitLabel: 'Module',
+          unitCount: 1
+        }
       });
     } else {
       toast.error(result.error);
@@ -209,6 +219,75 @@ const CoursesManagement = () => {
               </div>
             </div>
 
+            <div className="border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-medium text-gray-900 mb-3">Course Structure Settings</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wide">Unit Type</label>
+                  <select
+                    value={courseForm.structure.unitType}
+                    onChange={(e) => {
+                      const unitType = e.target.value;
+                      const unitLabel = unitType.charAt(0).toUpperCase() + unitType.slice(1);
+                      setCourseForm({
+                        ...courseForm,
+                        structure: {
+                          ...courseForm.structure,
+                          unitType,
+                          unitLabel
+                        }
+                      });
+                    }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    required
+                  >
+                    <option value="chapter">Chapter</option>
+                    <option value="module">Module</option>
+                    <option value="section">Section</option>
+                    <option value="topic">Topic</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wide">Unit Label</label>
+                  <input
+                    type="text"
+                    value={courseForm.structure.unitLabel}
+                    onChange={(e) => setCourseForm({
+                      ...courseForm,
+                      structure: {
+                        ...courseForm.structure,
+                        unitLabel: e.target.value
+                      }
+                    })}
+                    placeholder="e.g., Chapter, Module, Section"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1 uppercase tracking-wide">Unit Count</label>
+                  <input
+                    type="number"
+                    value={courseForm.structure.unitCount}
+                    onChange={(e) => setCourseForm({
+                      ...courseForm,
+                      structure: {
+                        ...courseForm.structure,
+                        unitCount: parseInt(e.target.value) || 1
+                      }
+                    })}
+                    min="1"
+                    max="100"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                    required
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Choose how your course content will be organized. Units can be Chapters, Modules, Sections, or Topics.
+              </p>
+            </div>
+
             <div className="flex gap-3">
               <button type="submit" className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 text-sm font-medium transition-colors">
                 Create Course
@@ -247,6 +326,9 @@ const CoursesManagement = () => {
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
                       Category: {course.category} | {course.structure?.unitLabel || 'Modules'}: {course.modules?.length || 0}
+                    </p>
+                    <p className="text-sm text-gray-500 mt-1">
+                      Created by: {course.createdBy?.name || course.createdBy?.username || 'Unknown'} ({course.createdBy?.role || 'admin'})
                     </p>
                     {course.audience && (
                       <div className="text-sm text-gray-500 mt-1">
@@ -367,15 +449,15 @@ const CourseManager = ({ course, onUpdate }) => {
 
   return (
     <div className="space-y-4">
-      {/* Deprecation Notice */}
-      <div className="bg-yellow-50 border border-yellow-200 rounded-md p-3 mb-4">
+      {/* Course Structure Info */}
+      <div className="bg-blue-50 border border-blue-200 rounded-md p-3 mb-4">
         <div className="flex items-start">
-          <MdWarning className="w-5 h-5 text-yellow-600 mt-0.5 mr-2 flex-shrink-0" />
+          <MdMenuBook className="w-5 h-5 text-blue-600 mt-0.5 mr-2 flex-shrink-0" />
           <div className="text-sm">
-            <p className="font-medium text-yellow-800">Legacy Module Management</p>
-            <p className="text-yellow-700 mt-1">
-              This interface uses the legacy "Module" terminology. Consider migrating to the new structured course system
-              with dynamic unit labels ({course.structure?.unitLabel || 'Module'}, Chapter, Section, etc.) for better content organization.
+            <p className="font-medium text-blue-800">Structured Course System</p>
+            <p className="text-blue-700 mt-1">
+              This course uses <strong>{course.structure?.unitLabel || 'Module'}</strong> organization ({course.structure?.unitType || 'module'} type).
+              You can create units and pages with rich content, media, and context-aware quizzes.
             </p>
           </div>
         </div>

@@ -1,39 +1,75 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams, useLocation, useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import axios from 'axios';
+import { getCourseWithProgress, getCourseProgress, completeModule } from '../utils/coursesApi';
 import PageViewer from '../components/PageViewer';
+import CongratulationModal from '../components/CongratulationModal';
+import { useAuth } from '../contexts/AuthContext';
 
 const CourseDetail = () => {
   const { courseId } = useParams();
+  const [searchParams] = useSearchParams();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, awardGems } = useAuth();
   const [course, setCourse] = useState(null);
   const [currentUnit, setCurrentUnit] = useState(null);
   const [currentPage, setCurrentPage] = useState(null);
   const [pageIndex, setPageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showCongratulationModal, setShowCongratulationModal] = useState(false);
+  const [completedModuleTitle, setCompletedModuleTitle] = useState('');
+  const [completedModuleIds, setCompletedModuleIds] = useState([]);
+  const [isFirstCompletion, setIsFirstCompletion] = useState(true);
+  const [completedModuleGems, setCompletedModuleGems] = useState(3);
+  const initialModuleId = searchParams.get('moduleId') || location.state?.moduleId || null;
 
   useEffect(() => {
     fetchCourseDetail();
-  }, [courseId]);
+  }, [courseId, initialModuleId]);
+
+  // Note: Page tracking removed - only module completion is tracked
+  // Pages are not tracked individually; module completion happens via "End Module" button
 
   const fetchCourseDetail = async () => {
     try {
       setLoading(true);
 
       // Fetch course details
-      const courseResponse = await axios.get(`/api/courses/${courseId}`);
-      const courseData = courseResponse.data.course || courseResponse.data;
+      const courseData = await getCourseWithProgress(courseId);
 
       setCourse(courseData);
 
-      // If course has units with pages, set up the first unit and page
-      if (courseData.modules && courseData.modules.length > 0) {
-        const firstUnit = courseData.modules[0];
-        setCurrentUnit(firstUnit);
+      // Initialize locally tracked completed modules from detailed progress if available
+      const initialCompleted = Array.isArray(courseData.progress?.unitDetails)
+        ? courseData.progress.unitDetails
+            .filter((ud) => ud.isCompleted)
+            .map((ud) => ud.unitId)
+        : Array.isArray(courseData.progress?.completedModuleIds)
+        ? courseData.progress.completedModuleIds
+        : Array.isArray(user?.completedModules)
+        ? user.completedModules
+        : [];
+      setCompletedModuleIds(initialCompleted.map((id) => id.toString()));
 
-        if (firstUnit.pages && firstUnit.pages.length > 0) {
+      // If course has units with pages, set up the initial unit and page
+      if (courseData.modules && courseData.modules.length > 0) {
+        let unitToOpen = courseData.modules[0];
+        if (initialModuleId) {
+          const match = courseData.modules.find((m) => m._id?.toString() === initialModuleId?.toString());
+          if (match) {
+            unitToOpen = match;
+          } else {
+            // Selected unit not visible (likely unpublished) – inform user and fallback
+            toast.error('The chapter you selected is not available yet. Showing the first available chapter.');
+          }
+        }
+        setCurrentUnit(unitToOpen);
+
+        if (unitToOpen.pages && unitToOpen.pages.length > 0) {
           // Sort pages by order and get the first one
-          const sortedPages = firstUnit.pages.sort((a, b) => a.order - b.order);
+          const sortedPages = unitToOpen.pages.sort((a, b) => a.order - b.order);
           setCurrentPage(sortedPages[0]);
           setPageIndex(0);
         }
@@ -91,13 +127,10 @@ const CourseDetail = () => {
       setCurrentPage(sortedPages[currentIndex + 1]);
       setPageIndex(currentIndex + 1);
     } else {
-      // Check if this is the last page of the unit - mark unit as complete
-      const isLastPageOfUnit = currentIndex === sortedPages.length - 1;
-      if (isLastPageOfUnit) {
-        markUnitComplete(currentUnit._id);
-      }
+      // We're on the last page already; do nothing here.
+      // Completion is handled by the Complete button in PageViewer.
 
-      // Go to next unit if available
+      // Optionally prepare next unit in state so after closing modal user can continue
       const currentUnitIndex = course.modules.findIndex(unit => unit._id === currentUnit._id);
       if (currentUnitIndex < course.modules.length - 1) {
         const nextUnit = course.modules[currentUnitIndex + 1];
@@ -129,11 +162,11 @@ const CourseDetail = () => {
   const hasNextPage = () => {
     if (!currentUnit || !currentUnit.pages || !course) return false;
 
-    const currentUnitIndex = course.modules.findIndex(unit => unit._id === currentUnit._id);
     const sortedPages = currentUnit.pages.sort((a, b) => a.order - b.order);
     const currentIndex = sortedPages.findIndex(page => page._id === currentPage._id);
 
-    return currentUnitIndex < course.modules.length - 1 || currentIndex < sortedPages.length - 1;
+    // Only consider next page within the current unit; do not look across units
+    return currentIndex < sortedPages.length - 1;
   };
 
   const getDifficultyColor = (difficulty) => {
@@ -149,18 +182,99 @@ const CourseDetail = () => {
     return completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
   };
 
+  const isModuleCompleted = (moduleId) => {
+    return completedModuleIds.includes(moduleId?.toString());
+  };
+
   const markUnitComplete = async (unitId) => {
     try {
-      const response = await axios.post(`/api/courses/${courseId}/module/${unitId}/complete`);
-      if (response.data.message === 'Module already completed') {
-        // Unit was already completed, no need to show notification
+      const response = await completeModule(courseId, unitId);
+      if (response.message === 'Module already completed') {
+        // This is a repeat completion - show modal with no gems
+        const completedUnit = course.modules.find(module => module._id === unitId);
+        if (completedUnit) {
+          setCompletedModuleTitle(completedUnit.title);
+          setIsFirstCompletion(false);
+          setCompletedModuleGems(0);
+          setShowCongratulationModal(true);
+        }
+        // Ensure local state reflects completion even if backend says already completed
+        setCompletedModuleIds((prev) => (prev.includes(unitId) ? prev : [...prev, unitId]));
         return;
       }
-      toast.success(`🎉 ${course.structure?.unitLabel || 'Unit'} completed! You earned ${response.data.gemsAwarded} gems!`);
+
+      // Find the completed unit title
+      const completedUnit = course.modules.find(module => module._id === unitId);
+      if (completedUnit) {
+        setCompletedModuleTitle(completedUnit.title);
+        setIsFirstCompletion(true); // This is a first completion
+        setShowCongratulationModal(true);
+      }
+
+      // Optimistically update local completion state
+      setCompletedModuleIds((prev) => (prev.includes(unitId) ? prev : [...prev, unitId]));
+
+      // Award gems locally if backend awarded them (default 3)
+      const gems = Number(response?.gemsAwarded || 0);
+      setCompletedModuleGems(gems);
+      if (gems > 0) {
+        awardGems(gems, 'Module completed');
+      }
+
+      // Optionally refresh progress from server to keep parity
+      try {
+        const latest = await getCourseProgress(courseId);
+        if (Array.isArray(latest?.unitDetails)) {
+          const refreshedCompleted = latest.unitDetails.filter((u) => u.isCompleted).map((u) => u.unitId.toString());
+          setCompletedModuleIds(refreshedCompleted);
+        }
+      } catch {}
     } catch (error) {
       console.error('Failed to mark unit complete:', error);
       // Don't show error toast as this might be called multiple times
     }
+  };
+
+  const handleEndUnit = async () => {
+    if (!currentUnit) return;
+    await markUnitComplete(currentUnit._id);
+
+    // After completion, if there is a next unit, pre-load its first page
+    const currentUnitIndex = course.modules.findIndex(unit => unit._id === currentUnit._id);
+    if (currentUnitIndex < course.modules.length - 1) {
+      const nextUnit = course.modules[currentUnitIndex + 1];
+      setCurrentUnit(nextUnit);
+      if (nextUnit.pages && nextUnit.pages.length > 0) {
+        const sortedNextPages = nextUnit.pages.sort((a, b) => a.order - b.order);
+        setCurrentPage(sortedNextPages[0]);
+        setPageIndex(0);
+      }
+    }
+  };
+
+  const handleCongratulationModalClose = () => {
+    setShowCongratulationModal(false);
+    // Redirect to dashboard courses tab to let user choose any course they want
+    navigate('/dashboard?tab=courses');
+  };
+
+  const handleTakeQuiz = async () => {
+    setShowCongratulationModal(false);
+
+    try {
+      // Try to find a unit quiz for the completed module
+      const response = await axios.get(`/api/quizzes/unit/${currentUnit._id}`);
+      if (response.data.quizzes && response.data.quizzes.length > 0) {
+        // Navigate to the first available unit quiz
+        navigate(`/quiz/${response.data.quizzes[0]._id}`);
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking for unit quiz:', error);
+    }
+
+    // If no unit quiz found, navigate back to courses
+    navigate('/dashboard?tab=courses');
   };
 
   if (loading) {
@@ -229,6 +343,19 @@ const CourseDetail = () => {
             courseStructure={course.structure}
             courseId={courseId}
             moduleId={currentUnit._id}
+            onComplete={handleEndUnit}
+            isCompleted={isModuleCompleted(currentUnit._id)}
+          />
+
+          {/* Congratulation Modal */}
+          <CongratulationModal
+            isOpen={showCongratulationModal}
+            onClose={handleCongratulationModalClose}
+            onTakeQuiz={handleTakeQuiz}
+            gemsEarned={completedModuleGems}
+            moduleTitle={completedModuleTitle}
+            username={user?.name}
+            isFirstCompletion={isFirstCompletion}
           />
         </div>
       </div>
@@ -298,6 +425,8 @@ const CourseDetail = () => {
                             setCurrentPage(sortedPages[0]);
                             setPageIndex(0);
                           }
+                          // Update URL to reflect the current unit for proper navigation
+                          navigate(`/courses/${courseId}?moduleId=${unit._id}`, { replace: true });
                           // Scroll to top when starting a unit
                           window.scrollTo(0, 0);
                         }}
@@ -332,6 +461,17 @@ const CourseDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* Congratulation Modal */}
+      <CongratulationModal
+        isOpen={showCongratulationModal}
+        onClose={handleCongratulationModalClose}
+        onTakeQuiz={handleTakeQuiz}
+        gemsEarned={completedModuleGems}
+        moduleTitle={completedModuleTitle}
+        username={user?.name}
+        isFirstCompletion={isFirstCompletion}
+      />
     </div>
   );
 };

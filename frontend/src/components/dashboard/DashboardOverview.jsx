@@ -4,6 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer } from 'recharts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCategory } from '../../contexts/CategoryContext';
 import CategoryToggle from '../CategoryToggle';
+import CourseCard from './CourseCard';
 
 const DashboardOverview = ({ stats = {} }) => {
   const { user } = useAuth();
@@ -139,48 +140,7 @@ const DashboardOverview = ({ stats = {} }) => {
         </div>
       </div>
 
-      {/* Learning Progress */}
-      {defaultStats.courseProgress && defaultStats.courseProgress.length > 0 && (
-        <div className="card shadow-soft">
-          <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">Learning Progress</h2>
-          <div className="space-y-4">
-            {defaultStats.courseProgress.slice(0, 5).map((course) => (
-              <div key={course.courseId} className="flex items-center justify-between">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-[13px] font-medium text-gray-900 truncate">
-                    {course.courseTitle}
-                  </h3>
-                  <p className="text-[11px] text-gray-500">
-                    {course.completedUnits} of {course.totalUnits} {course.unitLabel.toLowerCase()}s completed
-                  </p>
-                </div>
-                <div className="flex items-center gap-3 ml-4">
-                  <div className="text-right">
-                    <div className="text-[13px] font-medium text-gray-900">
-                      {course.progressPercentage}%
-                    </div>
-                  </div>
-                  <div className="w-16 sm:w-20">
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                        style={{ width: `${course.progressPercentage}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-          {defaultStats.courseProgress.length > 5 && (
-            <div className="mt-4 pt-4 border-t border-gray-200">
-              <p className="text-xs text-gray-600 text-center">
-                +{defaultStats.courseProgress.length - 5} more courses in progress
-              </p>
-            </div>
-          )}
-        </div>
-      )}
+      {/* Courses content moved to Courses tab. */}
     </div>
   );
 };

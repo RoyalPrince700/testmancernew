@@ -8,8 +8,6 @@ const router = express.Router();
 
 // Google OAuth routes
 router.get('/google', (req, res, next) => {
-  console.log('Google OAuth route called');
-
   if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
     console.error('Google OAuth credentials not found');
     return res.status(500).json({
@@ -35,11 +33,7 @@ router.get('/test', (req, res) => {
 });
 
 // Get current user
-router.get('/me', (req, res, next) => {
-  console.log('GET /api/auth/me route hit');
-  console.log('Headers:', req.headers);
-  next();
-}, protect, getMe);
+router.get('/me', protect, getMe);
 
 // Logout
 router.post('/logout', (req, res) => {

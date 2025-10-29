@@ -18,8 +18,7 @@ import postUtmeRoutes from './routes/postutme.js';
 import uploadRoutes from './routes/uploads.js';
 import adminRoutes from './routes/admin.js';
 
-// Load environment variables
-dotenv.config();
+// Environment variables are loaded in config files as needed
 
 // Create Express app
 const app = express();
@@ -90,7 +89,10 @@ passport.deserializeUser(async (id, done) => {
 // Middleware
 app.use(helmet()); // Security headers
 app.use(compression()); // Compress responses
-app.use(morgan('combined')); // Logging
+// Only log in development mode
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('combined')); // Logging
+}
 app.use(cors({
   origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true

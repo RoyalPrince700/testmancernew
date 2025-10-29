@@ -98,8 +98,8 @@ const quizSchema = new mongoose.Schema({
   },
   difficulty: {
     type: String,
-    enum: ['beginner', 'intermediate', 'advanced'],
-    default: 'intermediate'
+    enum: ['easy', 'medium', 'hard'],
+    default: 'medium'
   },
   category: {
     type: String,
@@ -153,9 +153,10 @@ quizSchema.index({ category: 1 });
 quizSchema.index({ difficulty: 1 });
 quizSchema.index({ totalAttempts: -1 });
 
-// Virtual for total questions count
+// Virtual for total questions count (safe when questions not selected)
 quizSchema.virtual('totalQuestions').get(function() {
-  return this.questions.length;
+  const questionsArray = this.questions;
+  return Array.isArray(questionsArray) ? questionsArray.length : 0;
 });
 
 // Virtual for total possible points
@@ -199,7 +200,7 @@ quizSchema.methods.calculateScore = function(userAnswers) {
   return {
     score: percentageScore,
     correctAnswers,
-    totalQuestions: this.questions.length,
+    totalQuestions: Array.isArray(this.questions) ? this.questions.length : 0,
     earnedPoints,
     totalPoints,
     passed,

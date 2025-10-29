@@ -5,7 +5,7 @@ import axios from 'axios';
 import { MdSchool, MdAccountBalance, MdGrade, MdMenuBook, MdPeople, MdQuiz } from 'react-icons/md';
 
 const SubAdminOverview = () => {
-  const { user, assignedUniversities, assignedFaculties, assignedLevels } = useAuth();
+  const { user, assignedUniversities, assignedFaculties, assignedLevels, assignedDepartments } = useAuth();
   const [stats, setStats] = useState({
     courses: 0,
     quizzes: 0,
@@ -94,34 +94,55 @@ const SubAdminOverview = () => {
       </div>
 
       {/* Assignment Scope */}
-      {(assignedUniversities.length > 0 || assignedFaculties.length > 0 || assignedLevels.length > 0) && (
+      {(assignedUniversities.length > 0 || assignedFaculties.length > 0 || assignedDepartments.length > 0 || assignedLevels.length > 0) && (
         <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-3">Your Assigned Scope</h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Your Assigned Scope</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {assignedUniversities.length > 0 && (
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <MdSchool className="w-5 h-5 text-blue-600 mr-2" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">{assignedUniversities.length} Universities</div>
-                  <div className="text-xs text-gray-500">Assigned institutions</div>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <MdSchool className="w-5 h-5 text-blue-600 mr-2" />
+                  <div className="font-medium text-gray-900 text-sm">Universities</div>
+                </div>
+                <div className="text-xs text-blue-700 font-medium mb-1">({assignedUniversities.length} assigned)</div>
+                <div className="text-xs text-gray-700 leading-relaxed">
+                  {assignedUniversities.join(', ')}
                 </div>
               </div>
             )}
             {assignedFaculties.length > 0 && (
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <MdAccountBalance className="w-5 h-5 text-green-600 mr-2" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">{assignedFaculties.length} Faculties</div>
-                  <div className="text-xs text-gray-500">Assigned departments</div>
+              <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <MdAccountBalance className="w-5 h-5 text-green-600 mr-2" />
+                  <div className="font-medium text-gray-900 text-sm">Faculties</div>
+                </div>
+                <div className="text-xs text-green-700 font-medium mb-1">({assignedFaculties.length} assigned)</div>
+                <div className="text-xs text-gray-700 leading-relaxed">
+                  {assignedFaculties.join(', ')}
+                </div>
+              </div>
+            )}
+            {assignedDepartments.length > 0 && (
+              <div className="bg-orange-50 border border-orange-200 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <MdSchool className="w-5 h-5 text-orange-600 mr-2" />
+                  <div className="font-medium text-gray-900 text-sm">Departments</div>
+                </div>
+                <div className="text-xs text-orange-700 font-medium mb-1">({assignedDepartments.length} assigned)</div>
+                <div className="text-xs text-gray-700 leading-relaxed">
+                  {assignedDepartments.join(', ')}
                 </div>
               </div>
             )}
             {assignedLevels.length > 0 && (
-              <div className="flex items-center p-3 bg-gray-50 rounded-lg">
-                <MdGrade className="w-5 h-5 text-purple-600 mr-2" />
-                <div>
-                  <div className="font-medium text-gray-900 text-sm">{assignedLevels.length} Levels</div>
-                  <div className="text-xs text-gray-500">Academic levels</div>
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="flex items-center mb-2">
+                  <MdGrade className="w-5 h-5 text-purple-600 mr-2" />
+                  <div className="font-medium text-gray-900 text-sm">Levels</div>
+                </div>
+                <div className="text-xs text-purple-700 font-medium mb-1">({assignedLevels.length} assigned)</div>
+                <div className="text-xs text-gray-700 leading-relaxed">
+                  {assignedLevels.join(', ')}
                 </div>
               </div>
             )}

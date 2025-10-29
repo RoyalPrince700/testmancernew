@@ -83,6 +83,10 @@ const userSchema = new mongoose.Schema({
     type: String,
     trim: true
   }],
+  assignedDepartments: [{
+    type: String,
+    trim: true
+  }],
   isUndergraduate: {
     type: Boolean,
     default: false
@@ -92,6 +96,10 @@ const userSchema = new mongoose.Schema({
     trim: true
   },
   faculty: {
+    type: String,
+    trim: true
+  },
+  department: {
     type: String,
     trim: true
   },
@@ -295,28 +303,35 @@ userSchema.methods.recordCompletionGemForUnit = function(courseId, unitId) {
   );
 
   if (!courseCompletionGems) {
+    // Create new completion entry with the unit already completed
     courseCompletionGems = {
       courseId: courseId,
-      completedUnits: [],
+      completedUnits: [unitId],
       completedPages: []
     };
     this.completionGems.push(courseCompletionGems);
-  }
-
-  // Add unit ID if not already present
-  if (!courseCompletionGems.completedUnits.some(id => id.toString() === unitId.toString())) {
-    courseCompletionGems.completedUnits.push(unitId);
     this.gems += 3; // Award 3 gems for unit completion
+  } else {
+    // Add unit ID if not already present
+    if (!courseCompletionGems.completedUnits.some(id => id.toString() === unitId.toString())) {
+      courseCompletionGems.completedUnits.push(unitId);
+      this.gems += 3; // Award 3 gems for unit completion
+
+      // Ensure Mongoose knows the subdocument array has been modified
+      this.markModified('completionGems');
+    }
   }
 
   return this.save();
 };
 
 // Method to record completion gem for a page (first-attempt tracking)
+// Note: Pages are tracked for progress but do NOT award gems
+// Only module/unit completion awards gems (3 gems per module)
 userSchema.methods.recordCompletionGemForPage = function(courseId, pageId) {
-  // Check if already earned
+  // Check if already tracked
   if (this.hasEarnedCompletionGemForPage(courseId, pageId)) {
-    return Promise.resolve(this); // Already earned, no change needed
+    return Promise.resolve(this); // Already tracked, no change needed
   }
 
   let courseCompletionGems = this.completionGems.find(completion =>
@@ -332,10 +347,10 @@ userSchema.methods.recordCompletionGemForPage = function(courseId, pageId) {
     this.completionGems.push(courseCompletionGems);
   }
 
-  // Add page ID if not already present
+  // Add page ID if not already present (for progress tracking only, no gems awarded)
   if (!courseCompletionGems.completedPages.some(id => id.toString() === pageId.toString())) {
     courseCompletionGems.completedPages.push(pageId);
-    this.gems += 3; // Award 3 gems for page completion
+    // NO gems awarded for page completion - only for module completion
   }
 
   return this.save();

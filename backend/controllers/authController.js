@@ -22,9 +22,6 @@ export const googleCallback = (req, res) => {
 
 export const getCurrentUser = async (req, res) => {
   try {
-    console.log('getCurrentUser called');
-    console.log('req.user:', req.user);
-    
     // Check if req.user exists and has the right structure
     if (!req.user) {
       console.error('No user in request');
@@ -36,7 +33,6 @@ export const getCurrentUser = async (req, res) => {
 
     // Handle both userId (from JWT) and _id (from passport)
     const userId = req.user.userId || req.user._id;
-    console.log('Looking for user with ID:', userId);
 
     const user = await User.findById(userId).select('-__v');
     if (!user) {
@@ -46,8 +42,7 @@ export const getCurrentUser = async (req, res) => {
         message: 'User not found'
       });
     }
-    
-    console.log('User found successfully:', user.email);
+
     res.json({ user });
   } catch (error) {
     console.error('Get current user error:', error);

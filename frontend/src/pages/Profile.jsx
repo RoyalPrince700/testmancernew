@@ -3,14 +3,18 @@ import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
-  const { user, updateUser } = useAuth();
+  const { user, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState('overview');
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     bio: '',
-    avatar: ''
+    avatar: '',
+    university: '',
+    faculty: '',
+    department: '',
+    level: ''
   });
   const [stats, setStats] = useState({});
   const [recentQuizzes, setRecentQuizzes] = useState([]);
@@ -18,7 +22,37 @@ const Profile = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  const avatarOptions = ['🎯', '👨‍💻', '👩‍💻', '👨‍🎓', '👩‍🔬', '👨‍🏫', '👩‍🎨', '👨‍🚀', '👩‍⚕️', '👨‍🔧', '👩‍🌾', '🧑‍💻'];
+  // Helper function to get user's initial
+  const getUserInitial = (name) => {
+    if (!name) return '?';
+    return name.charAt(0).toUpperCase();
+  };
+
+  // Helper function to generate consistent color based on name
+  const getAvatarColor = (name) => {
+    if (!name) return '#6B7280'; // gray-500
+
+    const colors = [
+      '#EF4444', // red-500
+      '#F97316', // orange-500
+      '#EAB308', // yellow-500
+      '#22C55E', // green-500
+      '#3B82F6', // blue-500
+      '#8B5CF6', // violet-500
+      '#EC4899', // pink-500
+      '#06B6D4', // cyan-500
+      '#84CC16', // lime-500
+      '#F59E0B', // amber-500
+    ];
+
+    // Generate consistent color based on name
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) {
+      hash = name.charCodeAt(i) + ((hash << 5) - hash);
+    }
+
+    return colors[Math.abs(hash) % colors.length];
+  };
 
   useEffect(() => {
     if (user) {
@@ -26,7 +60,11 @@ const Profile = () => {
         name: user.name || '',
         email: user.email || '',
         bio: user.bio || '',
-        avatar: user.avatar || '🎯'
+        avatar: user.avatar || '🎯',
+        university: user.university || '',
+        faculty: user.faculty || '',
+        department: user.department || '',
+        level: user.level || ''
       });
       fetchProfileData();
     }
@@ -77,18 +115,11 @@ const Profile = () => {
     }));
   };
 
-  const handleAvatarSelect = (avatar) => {
-    setFormData(prev => ({
-      ...prev,
-      avatar
-    }));
-  };
-
   const handleSave = async () => {
     setSaving(true);
     try {
       // TODO: Replace with actual API call
-      await updateUser(formData);
+      await updateProfile(formData);
       setIsEditing(false);
       toast.success('Profile updated successfully!');
     } catch (error) {
@@ -103,7 +134,11 @@ const Profile = () => {
       name: user?.name || '',
       email: user?.email || '',
       bio: user?.bio || '',
-      avatar: user?.avatar || '🎯'
+      avatar: user?.avatar || '🎯',
+      university: user?.university || '',
+      faculty: user?.faculty || '',
+      department: user?.department || '',
+      level: user?.level || ''
     });
     setIsEditing(false);
   };
@@ -129,11 +164,58 @@ const Profile = () => {
       <div className="card mb-8">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between">
           <div className="flex items-center mb-4 md:mb-0">
-            <div className="text-6xl mr-6">{formData.avatar}</div>
+            <div className="w-16 h-16 mr-4 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-xl"
+                 style={{ backgroundColor: getAvatarColor(formData.name) }}>
+              {formData.avatar && formData.avatar.startsWith('http') ? (
+                <img
+                  src={formData.avatar}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div
+                className="flex items-center justify-center w-full h-full"
+                style={{ display: formData.avatar && formData.avatar.startsWith('http') ? 'none' : 'flex' }}
+              >
+                {getUserInitial(formData.name)}
+              </div>
+            </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">{formData.name || 'TestMancer User'}</h1>
+              <h1 className="text-2xl font-bold text-gray-900">{formData.name || 'TestMancer User'}</h1>
               <p className="text-gray-600">{formData.email}</p>
               {formData.bio && <p className="text-gray-500 mt-1">{formData.bio}</p>}
+
+              {/* Academic Information */}
+              <div className="mt-3 space-y-1">
+                {(formData.university || formData.faculty || formData.department || formData.level) && (
+                  <>
+                    {formData.university && (
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">University:</span> {formData.university}
+                      </p>
+                    )}
+                    {formData.faculty && (
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Faculty:</span> {formData.faculty}
+                      </p>
+                    )}
+                    {formData.department && (
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Department:</span> {formData.department}
+                      </p>
+                    )}
+                    {formData.level && (
+                      <p className="text-sm text-gray-700">
+                        <span className="font-medium">Level:</span> {formData.level}
+                      </p>
+                    )}
+                  </>
+                )}
+              </div>
             </div>
           </div>
           <div className="flex space-x-3">
@@ -315,23 +397,18 @@ const Profile = () => {
 
             {isEditing ? (
               <div className="space-y-6">
-                {/* Avatar Selection */}
+                {/* Avatar Info */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-3">Avatar</label>
-                  <div className="grid grid-cols-6 gap-3">
-                    {avatarOptions.map((avatar) => (
-                      <button
-                        key={avatar}
-                        onClick={() => handleAvatarSelect(avatar)}
-                        className={`text-3xl p-3 rounded-lg border-2 ${
-                          formData.avatar === avatar
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        {avatar}
-                      </button>
-                    ))}
+                  <div className="flex items-center p-4 bg-gray-50 rounded-lg">
+                    <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-base mr-3"
+                         style={{ backgroundColor: getAvatarColor(formData.name) }}>
+                      {getUserInitial(formData.name)}
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-700">Your avatar is automatically generated from your name</p>
+                      <p className="text-xs text-gray-500">Upload a profile picture in the future to replace it</p>
+                    </div>
                   </div>
                 </div>
 
@@ -373,6 +450,57 @@ const Profile = () => {
                     placeholder="Tell us about yourself..."
                   />
                 </div>
+
+                {/* Academic Information */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">University</label>
+                    <input
+                      type="text"
+                      name="university"
+                      value={formData.university}
+                      onChange={handleInputChange}
+                      className="input-field"
+                      placeholder="Your university"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Faculty</label>
+                    <input
+                      type="text"
+                      name="faculty"
+                      value={formData.faculty}
+                      onChange={handleInputChange}
+                      className="input-field"
+                      placeholder="Your faculty"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Department</label>
+                    <input
+                      type="text"
+                      name="department"
+                      value={formData.department}
+                      onChange={handleInputChange}
+                      className="input-field"
+                      placeholder="Your department"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Level</label>
+                    <input
+                      type="text"
+                      name="level"
+                      value={formData.level}
+                      onChange={handleInputChange}
+                      className="input-field"
+                      placeholder="Your level"
+                    />
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="space-y-4">
@@ -381,7 +509,26 @@ const Profile = () => {
                     <div className="font-medium text-gray-900">Avatar</div>
                     <div className="text-sm text-gray-500">Choose your profile picture</div>
                   </div>
-                  <div className="text-4xl">{formData.avatar}</div>
+                  <div className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center text-white font-bold text-base"
+                       style={{ backgroundColor: getAvatarColor(formData.name) }}>
+                    {formData.avatar && formData.avatar.startsWith('http') ? (
+                      <img
+                        src={formData.avatar}
+                        alt="Profile"
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'flex';
+                        }}
+                      />
+                    ) : null}
+                    <div
+                      className="flex items-center justify-center w-full h-full"
+                      style={{ display: formData.avatar && formData.avatar.startsWith('http') ? 'none' : 'flex' }}
+                    >
+                      {getUserInitial(formData.name)}
+                    </div>
+                  </div>
                 </div>
 
                 <div className="flex items-center justify-between py-3 border-b border-gray-200">
@@ -402,6 +549,34 @@ const Profile = () => {
                   <div>
                     <div className="font-medium text-gray-900">Bio</div>
                     <div className="text-sm text-gray-500">{formData.bio || 'Not set'}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                  <div>
+                    <div className="font-medium text-gray-900">University</div>
+                    <div className="text-sm text-gray-500">{formData.university || 'Not set'}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                  <div>
+                    <div className="font-medium text-gray-900">Faculty</div>
+                    <div className="text-sm text-gray-500">{formData.faculty || 'Not set'}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-3 border-b border-gray-200">
+                  <div>
+                    <div className="font-medium text-gray-900">Department</div>
+                    <div className="text-sm text-gray-500">{formData.department || 'Not set'}</div>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between py-3">
+                  <div>
+                    <div className="font-medium text-gray-900">Level</div>
+                    <div className="text-sm text-gray-500">{formData.level || 'Not set'}</div>
                   </div>
                 </div>
               </div>

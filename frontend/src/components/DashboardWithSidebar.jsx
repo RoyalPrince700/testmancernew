@@ -9,7 +9,8 @@ import {
   MdSettings,
   MdHelp,
   MdMenu,
-  MdClose
+  MdClose,
+  MdAssessment
 } from 'react-icons/md';
 
 // Import dashboard components
@@ -49,6 +50,7 @@ const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => 
     { name: 'My Courses', href: 'courses', icon: MdMenuBook },
     { name: 'Recent Activity', href: 'activity', icon: MdLeaderboard },
     { name: 'Quick Actions', href: 'actions', icon: MdPerson },
+    { name: 'Results', href: 'results', icon: MdAssessment },
     { name: 'Settings', href: 'settings', icon: MdSettings },
     { name: 'Help', href: 'help', icon: MdHelp },
   ];
@@ -174,11 +176,22 @@ const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => 
       {/* Main Content */}
       <div className={`${!isMobile && (sidebarOpen ? 'ml-64' : 'ml-16')} transition-all duration-300 ease-in-out flex flex-col min-h-screen`}>
         <main className="flex-1 overflow-y-auto">
-          <div className={`p-5 ${isMobile ? 'pt-20' : ''}`}>
+          <div className={`p-5 ${isMobile ? 'pt-4' : ''}`}>
             {activeTab === 'overview' && <DashboardOverview stats={stats} />}
-            {activeTab === 'courses' && <PersonalizedCourses personalizedCourses={personalizedCourses} />}
+            {activeTab === 'courses' && (
+              <PersonalizedCourses
+                personalizedCourses={personalizedCourses}
+                courseProgress={stats?.courseProgress || []}
+              />
+            )}
             {activeTab === 'activity' && <RecentQuizzes recentQuizzes={recentQuizzes} />}
             {activeTab === 'actions' && <QuickActions />}
+            {activeTab === 'results' && (
+              <div className="card">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Results</h2>
+                <p className="text-gray-600">Results component coming soon...</p>
+              </div>
+            )}
             {activeTab === 'settings' && (
               <div className="card">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Settings</h2>

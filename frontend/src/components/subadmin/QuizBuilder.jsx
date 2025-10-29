@@ -17,7 +17,7 @@ const QuizBuilder = ({
     description: '',
     timeLimit: 30,
     passingScore: 60,
-    difficulty: 'intermediate',
+    difficulty: 'medium',
     category: 'tertiary',
     questions: []
   });
@@ -32,7 +32,7 @@ const QuizBuilder = ({
         description: existingQuiz.description || '',
         timeLimit: existingQuiz.timeLimit || 30,
         passingScore: existingQuiz.passingScore || 60,
-        difficulty: existingQuiz.difficulty || 'intermediate',
+        difficulty: existingQuiz.difficulty || 'medium',
         category: existingQuiz.category || 'tertiary',
         questions: existingQuiz.questions || []
       });
@@ -127,7 +127,7 @@ const QuizBuilder = ({
         description: quizForm.description,
         questions: quizForm.questions,
         trigger,
-        moduleId: trigger === 'unit' ? moduleId : undefined,
+        moduleId: moduleId, // moduleId is passed for both unit and page quizzes
         pageOrder: trigger === 'page' ? pageOrder : undefined,
         timeLimit: quizForm.timeLimit,
         passingScore: quizForm.passingScore,
@@ -208,7 +208,11 @@ const QuizBuilder = ({
                     type="number"
                     min="5"
                     value={quizForm.timeLimit}
-                    onChange={(e) => handleQuizChange('timeLimit', parseInt(e.target.value))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? '' : parseInt(value);
+                      handleQuizChange('timeLimit', numValue === '' ? 30 : (isNaN(numValue) ? 30 : numValue));
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -237,7 +241,11 @@ const QuizBuilder = ({
                     min="0"
                     max="100"
                     value={quizForm.passingScore}
-                    onChange={(e) => handleQuizChange('passingScore', parseInt(e.target.value))}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      const numValue = value === '' ? '' : parseInt(value);
+                      handleQuizChange('passingScore', numValue === '' ? 60 : (isNaN(numValue) ? 60 : numValue));
+                    }}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   />
                 </div>
@@ -250,9 +258,9 @@ const QuizBuilder = ({
                     onChange={(e) => handleQuizChange('difficulty', e.target.value)}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
-                    <option value="beginner">Beginner</option>
-                    <option value="intermediate">Intermediate</option>
-                    <option value="advanced">Advanced</option>
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
                   </select>
                 </div>
                 <div>

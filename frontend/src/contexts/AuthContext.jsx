@@ -180,17 +180,20 @@ export const AuthProvider = ({ children }) => {
     if (userRole === 'subadmin') {
       const assignedUniversities = user?.assignedUniversities || [];
       const assignedFaculties = user?.assignedFaculties || [];
+      const assignedDepartments = user?.assignedDepartments || [];
       const assignedLevels = user?.assignedLevels || [];
 
       // Check if course has audience restrictions
       if (course.audience) {
         const courseUniversities = course.audience.universities || [];
         const courseFaculties = course.audience.faculties || [];
+        const courseDepartments = course.audience.departments || [];
         const courseLevels = course.audience.levels || [];
 
-        // If course has audience restrictions, user must be assigned to at least one
+        // STRICT VALIDATION: If course has audience restrictions, ALL must match
         if (courseUniversities.length > 0 && !courseUniversities.some(u => assignedUniversities.includes(u))) return false;
         if (courseFaculties.length > 0 && !courseFaculties.some(f => assignedFaculties.includes(f))) return false;
+        if (courseDepartments.length > 0 && !courseDepartments.some(d => assignedDepartments.includes(d))) return false;
         if (courseLevels.length > 0 && !courseLevels.some(l => assignedLevels.includes(l))) return false;
       }
     }
@@ -219,6 +222,7 @@ export const AuthProvider = ({ children }) => {
     role: user?.role || 'user',
     assignedUniversities: user?.assignedUniversities || [],
     assignedFaculties: user?.assignedFaculties || [],
+    assignedDepartments: user?.assignedDepartments || [],
     assignedLevels: user?.assignedLevels || [],
     canManageCourses: canManageCourses(),
     canAccessCourse,

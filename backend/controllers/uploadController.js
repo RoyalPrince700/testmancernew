@@ -105,7 +105,7 @@ export const uploadAudioFile = async (req, res) => {
           }
         });
       } catch (uploadError) {
-        console.error('Cloudinary upload error:', uploadError);
+        console.error('Cloudinary upload error:', uploadError.message);
         res.status(500).json({
           success: false,
           message: 'Failed to upload audio file to cloud storage'

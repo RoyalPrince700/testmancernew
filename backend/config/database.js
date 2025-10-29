@@ -9,10 +9,9 @@ export const connectDB = async () => {
       console.warn('⚠️  Make sure MongoDB is running locally or set MONGODB_URI environment variable');
     }
 
-    const conn = await mongoose.connect(mongoUri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true,
-    });
+    const conn = await mongoose.connect(mongoUri);
+
+    console.log('Connected to MongoDB successfully');
 
     // Handle connection events
     mongoose.connection.on('error', (err) => {
