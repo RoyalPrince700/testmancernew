@@ -1,7 +1,7 @@
 import express from 'express';
 import rateLimit from 'express-rate-limit';
 import { protect, requirePermission } from '../middleware/auth.js';
-import { uploadAudioFile, uploadVideoFile } from '../controllers/uploadController.js';
+import { uploadAudioFile, uploadVideoFile, uploadPdfFile, uploadDocumentFile } from '../controllers/uploadController.js';
 
 const router = express.Router();
 
@@ -29,5 +29,11 @@ router.post('/audio', uploadAudioFile);
 
 // Upload video file
 router.post('/video', uploadVideoFile);
+
+// Upload PDF file
+router.post('/pdf', uploadPdfFile);
+
+// Upload document file
+router.post('/document', uploadDocumentFile);
 
 export default router;

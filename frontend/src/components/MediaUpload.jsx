@@ -17,6 +17,10 @@ const MediaUpload = ({ onUploadComplete, type = 'both', className = '' }) => {
         return 'audio/*,.mp3,.m4a,.wav';
       case 'video':
         return 'video/*,.mp4,.avi';
+      case 'pdf':
+        return '.pdf,application/pdf';
+      case 'document':
+        return '.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,text/plain';
       default:
         return 'audio/*,video/*,.mp3,.m4a,.wav,.mp4,.avi';
     }
@@ -24,18 +28,36 @@ const MediaUpload = ({ onUploadComplete, type = 'both', className = '' }) => {
 
   // Get file size limits
   const getMaxSize = (fileType) => {
-    return fileType.startsWith('audio/') || fileType.includes('audio') ? 50 : 100;
+    if (fileType.startsWith('audio/') || fileType.includes('audio')) return 50;
+    if (fileType.startsWith('video/') || fileType.includes('video')) return 100;
+    if (fileType === 'pdf' || fileType.includes('pdf')) return 25;
+    if (fileType === 'document' || fileType.includes('document')) return 25;
+    return 25; // Default for documents
   };
 
   // Validate file before upload
   const validateFile = (file) => {
     const allowedAudioTypes = ['audio/mpeg', 'audio/mp3', 'audio/m4a', 'audio/wav', 'audio/x-wav'];
     const allowedVideoTypes = ['video/mp4', 'video/x-msvideo', 'video/avi'];
+    const allowedPdfTypes = ['application/pdf'];
+    const allowedDocumentTypes = [
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'text/plain'
+    ];
     const allowedAudioExtensions = ['.mp3', '.m4a', '.wav'];
     const allowedVideoExtensions = ['.mp4', '.avi'];
+    const allowedPdfExtensions = ['.pdf'];
+    const allowedDocumentExtensions = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'];
 
     const isAudio = type === 'audio' || type === 'both';
     const isVideo = type === 'video' || type === 'both';
+    const isPdf = type === 'pdf';
+    const isDocument = type === 'document';
 
     let isValidType = false;
 
@@ -49,10 +71,22 @@ const MediaUpload = ({ onUploadComplete, type = 'both', className = '' }) => {
       isValidType = true;
     }
 
+    if (isPdf && (allowedPdfTypes.includes(file.type) ||
+        allowedPdfExtensions.some(ext => file.name.toLowerCase().endsWith(ext)))) {
+      isValidType = true;
+    }
+
+    if (isDocument && (allowedDocumentTypes.includes(file.type) ||
+        allowedDocumentExtensions.some(ext => file.name.toLowerCase().endsWith(ext)))) {
+      isValidType = true;
+    }
+
     if (!isValidType) {
       const allowedTypes = [];
       if (isAudio) allowedTypes.push('MP3, M4A, WAV');
       if (isVideo) allowedTypes.push('MP4, AVI');
+      if (isPdf) allowedTypes.push('PDF');
+      if (isDocument) allowedTypes.push('DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT');
       toast.error(`Invalid file type. Allowed: ${allowedTypes.join(', ')}`);
       return false;
     }
@@ -71,16 +105,47 @@ const MediaUpload = ({ onUploadComplete, type = 'both', className = '' }) => {
     if (!validateFile(file)) return;
 
     const formData = new FormData();
-    const isAudio = file.type.startsWith('audio/') || ['.mp3', '.m4a', '.wav'].some(ext => file.name.toLowerCase().endsWith(ext));
 
-    formData.append(isAudio ? 'audio' : 'video', file);
+    // Determine upload type and endpoint
+    let uploadType = 'video'; // Default
+    let endpoint = 'video';
+
+    const isAudio = file.type.startsWith('audio/') || ['.mp3', '.m4a', '.wav'].some(ext => file.name.toLowerCase().endsWith(ext));
+    const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    const isDocument = ['.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx', '.txt'].some(ext => file.name.toLowerCase().endsWith(ext)) ||
+                      ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                       'application/vnd.ms-excel', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                       'application/vnd.ms-powerpoint', 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+                       'text/plain'].includes(file.type);
+
+    if (isAudio) {
+      uploadType = 'audio';
+      endpoint = 'audio';
+      formData.append('audio', file);
+    } else if (isPdf) {
+      endpoint = 'pdf';
+      formData.append('pdf', file);
+    } else if (isDocument) {
+      endpoint = 'document';
+      formData.append('document', file);
+    } else {
+      // Video
+      formData.append('video', file);
+    }
 
     setUploading(true);
     setUploadProgress(0);
 
     try {
+      console.log('[MediaUpload] Starting file upload...', {
+        fileName: file.name,
+        fileSize: file.size,
+        fileType: file.type,
+        endpoint: endpoint
+      });
+      
       const response = await axios.post(
-        `/api/admin/uploads/${isAudio ? 'audio' : 'video'}`,
+        `/api/admin/uploads/${endpoint}`,
         formData,
         {
           headers: {
@@ -93,26 +158,41 @@ const MediaUpload = ({ onUploadComplete, type = 'both', className = '' }) => {
         }
       );
 
+      console.log('[MediaUpload] Upload response:', response.data);
+
       if (response.data.success) {
+        const fileTypeLabel = isAudio ? 'Audio' : isPdf ? 'PDF' : isDocument ? 'Document' : 'Video';
+
+        console.log('[MediaUpload] Upload successful:', {
+          url: response.data.data.url,
+          bytes: response.data.data.bytes,
+          format: response.data.data.format,
+          publicId: response.data.data.publicId
+        });
+
         setUploadedFile({
           url: response.data.data.url,
-          type: isAudio ? 'audio' : 'video',
+          type: isAudio ? 'audio' : isPdf ? 'pdf' : isDocument ? 'document' : 'video',
           name: file.name,
           size: file.size,
           duration: response.data.data.duration,
         });
 
-        toast.success(`${isAudio ? 'Audio' : 'Video'} uploaded successfully!`);
+        toast.success(`${fileTypeLabel} uploaded successfully!`);
 
         // Call the callback if provided
         if (onUploadComplete) {
+          console.log('[MediaUpload] Calling onUploadComplete callback');
           onUploadComplete(response.data.data);
         }
       } else {
+        console.error('[MediaUpload] Upload failed:', response.data.message);
         toast.error(response.data.message || 'Upload failed');
       }
     } catch (error) {
-      console.error('Upload error:', error);
+      console.error('[MediaUpload] Upload error:', error);
+      console.error('[MediaUpload] Error response:', error.response?.data);
+      console.error('[MediaUpload] Error status:', error.response?.status);
       const errorMessage = error.response?.data?.message || 'Upload failed. Please try again.';
       toast.error(errorMessage);
     } finally {

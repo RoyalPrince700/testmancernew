@@ -17,6 +17,7 @@ import leaderboardRoutes from './routes/leaderboard.js';
 import postUtmeRoutes from './routes/postutme.js';
 import uploadRoutes from './routes/uploads.js';
 import adminRoutes from './routes/admin.js';
+import resourceRoutes from './routes/resources.js';
 
 // Environment variables are loaded in config files as needed
 
@@ -37,14 +38,22 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
   },
   async (accessToken, refreshToken, profile, done) => {
     try {
+      const primaryEmail = profile?.emails && profile.emails.length > 0 ? profile.emails[0].value : null;
+      const avatarUrl = profile?.photos && profile.photos.length > 0 ? profile.photos[0].value : undefined;
+      const displayName = profile?.displayName || 'Google User';
+
+      if (!primaryEmail) {
+        // Without an email we cannot uniquely identify the user
+        return done(new Error('Google profile did not return an email. Ensure the "email" scope is granted.'), null);
+      }
+
       // Check if user already exists
       let user = await User.findOne({ googleId: profile.id });
 
       if (user) {
-        // Update user info if changed
-        user.name = profile.displayName;
-        user.email = profile.emails[0].value;
-        user.avatar = profile.photos[0].value;
+        user.name = displayName;
+        user.email = primaryEmail;
+        if (avatarUrl) user.avatar = avatarUrl;
         await user.save();
         return done(null, user);
       }
@@ -52,9 +61,9 @@ if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
       // Create new user
       user = new User({
         googleId: profile.id,
-        email: profile.emails[0].value,
-        name: profile.displayName,
-        avatar: profile.photos[0].value,
+        email: primaryEmail,
+        name: displayName,
+        avatar: avatarUrl,
         learningCategories: [],
         gems: 0,
         completedModules: [],
@@ -125,6 +134,7 @@ app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/post-utme', postUtmeRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/admin/uploads', uploadRoutes);
+app.use('/api/resources', resourceRoutes);
 
 // Health check route
 app.get('/api/health', (req, res) => {

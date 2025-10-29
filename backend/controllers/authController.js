@@ -4,6 +4,10 @@ import User from '../models/User.js';
 export const googleCallback = (req, res) => {
   try {
     const { user } = req;
+    if (!user) {
+      const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
+      return res.redirect(`${frontendUrl}/auth?error=auth_failed`);
+    }
     const token = jwt.sign(
       { userId: user._id, email: user.email },
       process.env.JWT_SECRET || 'default-secret-key-change-in-production',

@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   MdHome,
   MdMenuBook,
+  MdLibraryBooks,
   MdCloudUpload,
   MdBarChart,
   MdSchool,
@@ -14,6 +15,7 @@ import {
 import {
   SubAdminOverview,
   SubAdminCoursesManagement,
+  SubAdminResourcesManagement,
   SubAdminMediaManagement,
   SubAdminAnalytics
 } from './subadmin';
@@ -26,6 +28,7 @@ const SubAdminDashboard = () => {
   const navManagement = [
     { name: 'Dashboard', href: 'dashboard', icon: MdHome },
     { name: 'Courses', href: 'courses', icon: MdMenuBook },
+    { name: 'Resources', href: 'resources', icon: MdLibraryBooks },
     { name: 'Media', href: 'media', icon: MdCloudUpload },
   ];
 
@@ -150,6 +153,7 @@ const SubAdminDashboard = () => {
           <div className="p-5">
             {activeTab === 'dashboard' && <SubAdminOverview />}
             {activeTab === 'courses' && <SubAdminCoursesManagement />}
+            {activeTab === 'resources' && <SubAdminResourcesManagement />}
             {activeTab === 'media' && <SubAdminMediaManagement />}
             {activeTab === 'analytics' && <SubAdminAnalytics />}
           </div>

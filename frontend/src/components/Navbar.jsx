@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { FaBars, FaTimes, FaUser, FaTrophy, FaBook, FaHome, FaSignOutAlt, FaGem, FaChartLine } from 'react-icons/fa';
+import { FaBars, FaTimes, FaUser, FaTrophy, FaBook, FaHome, FaSignOutAlt, FaGem, FaChartLine, FaFolder } from 'react-icons/fa';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated, isAdmin, isSubAdmin } = useAuth();
@@ -23,6 +23,7 @@ const Navbar = () => {
       { path: '/', label: 'Home', icon: FaHome },
       { path: '/dashboard', label: 'Dashboard', icon: FaChartLine, protected: true },
       { path: '/courses', label: 'Courses', icon: FaBook, protected: true },
+      { path: '/resources', label: 'Resources', icon: FaFolder, protected: true },
       { path: '/leaderboard', label: 'Leaderboard', icon: FaTrophy, protected: true },
     ];
 
@@ -46,10 +47,6 @@ const Navbar = () => {
   const navItems = getNavItems();
 
   const isActive = (path) => {
-    if (path.includes('?')) {
-      const [pathname] = path.split('?');
-      return location.pathname === pathname;
-    }
     return location.pathname === path;
   };
 

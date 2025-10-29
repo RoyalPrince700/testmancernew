@@ -10,7 +10,8 @@ import {
   MdHelp,
   MdMenu,
   MdClose,
-  MdAssessment
+  MdAssessment,
+  MdLibraryBooks
 } from 'react-icons/md';
 
 // Import dashboard components
@@ -18,7 +19,8 @@ import {
   DashboardOverview,
   RecentQuizzes,
   PersonalizedCourses,
-  QuickActions
+  QuickActions,
+  Resources
 } from './dashboard';
 
 const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => {
@@ -48,6 +50,7 @@ const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => 
   const navItems = [
     { name: 'Overview', href: 'overview', icon: MdHome },
     { name: 'My Courses', href: 'courses', icon: MdMenuBook },
+    { name: 'Resources', href: 'resources', icon: MdLibraryBooks },
     { name: 'Recent Activity', href: 'activity', icon: MdLeaderboard },
     { name: 'Quick Actions', href: 'actions', icon: MdPerson },
     { name: 'Results', href: 'results', icon: MdAssessment },
@@ -184,6 +187,7 @@ const DashboardWithSidebar = ({ stats, recentQuizzes, personalizedCourses }) => 
                 courseProgress={stats?.courseProgress || []}
               />
             )}
+            {activeTab === 'resources' && <Resources />}
             {activeTab === 'activity' && <RecentQuizzes recentQuizzes={recentQuizzes} />}
             {activeTab === 'actions' && <QuickActions />}
             {activeTab === 'results' && (

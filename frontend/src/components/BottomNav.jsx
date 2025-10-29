@@ -1,6 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
-import { FaHome, FaBook, FaChartBar, FaUser, FaTrophy } from 'react-icons/fa';
+import { FaHome, FaBook, FaChartBar, FaTrophy } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 
 const BottomNav = () => {

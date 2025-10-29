@@ -26,6 +26,7 @@ import Leaderboard from './pages/Leaderboard';
 import Profile from './pages/Profile';
 import Onboarding from './pages/Onboarding';
 import NotFound from './pages/NotFound';
+import ResourcesPage from './pages/ResourcesPage';
 
 // Post-UTME Pages
 import { PostUtme, EnglishCourse, MathematicsCourse, CurrentAffairsCourse, PostUtmeLeaderboard } from './pages/postutme';
@@ -108,6 +109,12 @@ function App() {
               <Route path="/profile" element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              } />
+
+              <Route path="/resources" element={
+                <ProtectedRoute>
+                  <ResourcesPage />
                 </ProtectedRoute>
               } />
 
