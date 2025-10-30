@@ -2,25 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { FaBars, FaTimes, FaUser, FaSignOutAlt, FaGem, FaChartLine } from 'react-icons/fa';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 
 const Navbar = () => {
   const { user, logout, isAuthenticated } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
-  useEffect(() => {
-    setMounted(true);
-    return () => setMounted(false);
-  }, []);
-
   // Lock body scroll when mobile menu is open
   useEffect(() => {
-    if (!mounted) return;
     if (isOpen) {
       const previous = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
@@ -28,7 +22,7 @@ const Navbar = () => {
         document.body.style.overflow = previous;
       };
     }
-  }, [isOpen, mounted]);
+  }, [isOpen]);
 
   const handleLogout = async () => {
     await logout();
@@ -118,7 +112,12 @@ const Navbar = () => {
 
         {/* ===== MOBILE NAVIGATION ===== */}
         <div className="md:hidden">
-          <div className="flex justify-between h-16">
+          <div className="flex justify-between items-center h-16">
+            {/* TestMancer Logo */}
+            <div className="flex items-center">
+              <Link to="/" className="text-xl font-bold text-gray-900">TestMancer</Link>
+            </div>
+
             {/* Mobile Menu Button */}
             <div className="flex items-center">
               <button
@@ -132,74 +131,127 @@ const Navbar = () => {
           </div>
         </div>
 
-        {mounted && createPortal(
+        {createPortal(
           (
-            <div className={`fixed inset-0 z-[120] md:hidden ${isOpen ? 'block' : 'hidden'}`}>
-              {/* Overlay */}
-              <div
-                className="fixed inset-0 bg-black bg-opacity-50 transition-opacity duration-300"
-                onClick={() => setIsOpen(false)}
-              />
+            <AnimatePresence>
+              {isOpen && (
+                <>
+                  {/* Overlay */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{
+                      duration: 0.3,
+                      ease: [0.4, 0.0, 0.2, 1]
+                    }}
+                    className="fixed inset-0 bg-black bg-opacity-50 z-[1000] md:hidden"
+                    onClick={() => setIsOpen(false)}
+                  />
 
-              {/* Sidebar */}
-              <div className={`fixed left-0 top-0 h-full w-80 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-[130] ${
-                isOpen ? 'translate-x-0' : '-translate-x-full'
-              }`}>
-                <div className="flex flex-col h-full">
-                  {/* Sidebar Header */}
-                  <div className="flex items-center justify-end p-4 border-b border-gray-200">
-                    <button
-                      onClick={() => setIsOpen(false)}
-                      className="p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-primary-400"
-                      aria-label="Close menu"
-                    >
-                      <FaTimes className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  {/* Sidebar Content */}
-                  <div className="flex-1 overflow-y-auto py-4">
-                    <div className="px-4 space-y-2">
-                      {isAuthenticated ? (
-                        <>
-                          <div className="flex items-center space-x-3 px-4 py-3 bg-yellow-50 rounded-lg">
-                            <FaGem className="w-5 h-5 text-yellow-600" />
-                            <span className="text-base font-medium text-yellow-800">
-                              {user?.gems || 0} Gems
-                            </span>
-                          </div>
-
-                          <Link
-                            to="/profile"
-                            onClick={() => setIsOpen(false)}
-                            className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
-                          >
-                            <FaUser className="w-5 h-5" />
-                            <span>Profile</span>
-                          </Link>
-
-                          <button
-                            onClick={handleLogout}
-                            className="flex items-center space-x-3 w-full text-left px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
-                          >
-                            <FaSignOutAlt className="w-5 h-5" />
-                            <span>Logout</span>
-                          </button>
-                        </>
-                      ) : (
-                        <Link
-                          to="/auth"
+                  {/* Sidebar */}
+                  <motion.div
+                    initial={{ x: "-100%" }}
+                    animate={{ x: 0 }}
+                    exit={{ x: "-100%" }}
+                    transition={{
+                      type: "spring",
+                      damping: 30,
+                      stiffness: 300,
+                      mass: 0.8
+                    }}
+                    className="fixed left-0 top-0 h-full w-80 bg-white shadow-2xl z-[1010] md:hidden"
+                  >
+                    <div className="flex flex-col h-full">
+                      {/* Sidebar Header */}
+                      <motion.div
+                        initial={{ opacity: 0, y: -20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2, duration: 0.4 }}
+                        className="flex items-center justify-end p-4 border-b border-gray-200"
+                      >
+                        <button
                           onClick={() => setIsOpen(false)}
-                          className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                          className="p-2 rounded-md text-gray-700 hover:text-gray-900 hover:bg-gray-100 focus-visible:ring-2 focus-visible:ring-primary-400"
+                          aria-label="Close menu"
                         >
-                          <span>Sign In</span>
-                        </Link>
-                      )}
+                          <FaTimes className="w-5 h-5" />
+                        </button>
+                      </motion.div>
+
+                      {/* Sidebar Content */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.3, duration: 0.5 }}
+                        className="flex-1 overflow-y-auto py-4"
+                      >
+                        <div className="px-4 space-y-2">
+                          {isAuthenticated ? (
+                            <>
+                              <motion.div
+                                initial={{ opacity: 0, scale: 0.9 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                transition={{ delay: 0.4, duration: 0.4 }}
+                                className="flex items-center space-x-3 px-4 py-3 bg-yellow-50 rounded-lg"
+                              >
+                                <FaGem className="w-5 h-5 text-yellow-600" />
+                                <span className="text-base font-medium text-yellow-800">
+                                  {user?.gems || 0} Gems
+                                </span>
+                              </motion.div>
+
+                              <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.5, duration: 0.4 }}
+                              >
+                                <Link
+                                  to="/profile"
+                                  onClick={() => setIsOpen(false)}
+                                  className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                                >
+                                  <FaUser className="w-5 h-5" />
+                                  <span>Profile</span>
+                                </Link>
+                              </motion.div>
+
+                              <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.6, duration: 0.4 }}
+                              >
+                                <button
+                                  onClick={handleLogout}
+                                  className="flex items-center space-x-3 w-full text-left px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                                >
+                                  <FaSignOutAlt className="w-5 h-5" />
+                                  <span>Logout</span>
+                                </button>
+                              </motion.div>
+                            </>
+                          ) : (
+                            <motion.div
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              transition={{ delay: 0.4, duration: 0.4 }}
+                            >
+                              <Link
+                                to="/auth"
+                                onClick={() => setIsOpen(false)}
+                                className="flex items-center space-x-3 px-4 py-3 text-base font-medium text-gray-700 hover:text-green-600 hover:bg-gray-50 rounded-lg transition-colors duration-200"
+                              >
+                                <span>Sign In</span>
+                              </Link>
+                            </motion.div>
+                          )}
+                        </div>
+                      </motion.div>
                     </div>
-                  </div>
-                </div>
-              </div>
-            </div>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>
           ),
           document.body
         )}

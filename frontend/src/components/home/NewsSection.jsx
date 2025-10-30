@@ -49,7 +49,7 @@ const NewsSection = () => {
         >
           <SectionHeader
             title="Latest Updates"
-            description="Stay informed with features and students achievements."
+            description="Stay informed with features and achievements."
             viewAllHref="/news"
           />
         </motion.div>
