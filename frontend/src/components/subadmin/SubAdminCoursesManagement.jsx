@@ -4,6 +4,7 @@ import axios from 'axios';
 import { toast } from 'react-hot-toast';
 import { MdAdd, MdEdit, MdDelete, MdSearch, MdFilterList, MdMenuBook, MdClose, MdSettings, MdPublish, MdUnpublished, MdVisibility } from 'react-icons/md';
 import MediaUpload from '../MediaUpload';
+import Card from '../ui/Card';
 
 const SubAdminCoursesManagement = () => {
   const { user, assignedUniversities, assignedFaculties, assignedDepartments, assignedLevels } = useAuth();
@@ -160,10 +161,10 @@ const SubAdminCoursesManagement = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
+      <Card className="p-5">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Course Management</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Course Management</h1>
             <p className="text-gray-600 mt-1 text-sm">
               Manage courses within your assigned scope ({getScopedCoursesCount()} of {courses.length} total courses)
             </p>
@@ -176,10 +177,10 @@ const SubAdminCoursesManagement = () => {
             Create Course
           </button>
         </div>
-      </div>
+      </Card>
 
       {/* Filters */}
-      <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
+      <Card className="p-5">
         <div className="flex-1">
           <div className="relative">
             <MdSearch className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -192,7 +193,7 @@ const SubAdminCoursesManagement = () => {
             />
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Create Course Form */}
       {showCreateForm && (

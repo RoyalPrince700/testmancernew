@@ -4,6 +4,7 @@ import toast from 'react-hot-toast';
 import { MdExpandMore, MdCheckCircle, MdRadioButtonUnchecked, MdQuiz } from 'react-icons/md';
 import { useAuth } from '../../contexts/AuthContext';
 import { CourseOverviewCard } from './index';
+import Card from '../ui/Card';
 
 const PersonalizedCourses = ({ personalizedCourses = [], courseProgress = [] }) => {
   const [expandedCourseId, setExpandedCourseId] = useState(null);
@@ -27,8 +28,8 @@ const PersonalizedCourses = ({ personalizedCourses = [], courseProgress = [] }) 
         userGems={userGems}
       />
 
-      <div className="card">
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Your Courses</h2>
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Your Courses</h2>
         {personalizedCourses.length > 0 ? (
           <>
             {/* Mobile: Card list */}
@@ -324,7 +325,7 @@ const PersonalizedCourses = ({ personalizedCourses = [], courseProgress = [] }) 
             </Link>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Interactive Course Cards removed; logic integrated into expandable rows above */}
     </div>

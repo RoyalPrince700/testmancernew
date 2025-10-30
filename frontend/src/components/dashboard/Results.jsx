@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import Card from '../ui/Card';
 
 const gradeFromTotal = (total) => {
   if (typeof total !== 'number') return null;
@@ -12,14 +13,33 @@ const gradeFromTotal = (total) => {
   return 'F';
 };
 
-const Results = () => {
+const Results = ({ personalizedCourses = [] }) => {
   const [results, setResults] = useState([]);
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchAll();
-  }, []);
+    // Use provided courses data if available
+    if (personalizedCourses && personalizedCourses.length > 0) {
+      setCourses(personalizedCourses);
+      fetchResultsOnly(); // Only fetch results, not courses
+    } else {
+      fetchAll();
+    }
+  }, [personalizedCourses]);
+
+  const fetchResultsOnly = async () => {
+    try {
+      setLoading(true);
+      const resResults = await axios.get('/api/assessments/results');
+      setResults(resResults.data.results || []);
+    } catch (error) {
+      console.error('Failed to load results:', error);
+      toast.error('Failed to load results');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const fetchAll = async () => {
     try {
@@ -105,20 +125,20 @@ const Results = () => {
 
   if (loading) {
     return (
-      <div className="card">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Results</h2>
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Results</h2>
         <div className="space-y-2">
           {[1,2,3].map(i => (
             <div key={i} className="h-10 bg-gray-200 animate-pulse rounded" />
           ))}
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="card">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">Results</h2>
+    <Card className="p-4 sm:p-6">
+      <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">Results</h2>
       <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200 text-sm">
           <thead className="bg-gray-50">
@@ -168,7 +188,7 @@ const Results = () => {
           </tbody>
         </table>
       </div>
-    </div>
+    </Card>
   );
 };
 

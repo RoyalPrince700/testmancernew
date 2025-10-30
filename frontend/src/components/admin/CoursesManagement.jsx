@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { adminApi } from '../../utils/adminApi';
 import { toast } from 'react-hot-toast';
 import { MdMenuBook, MdWarning } from 'react-icons/md';
+import Card from '../ui/Card';
 
 const CoursesManagement = () => {
   const [courses, setCourses] = useState([]);
@@ -106,7 +107,7 @@ const CoursesManagement = () => {
       </div>
 
       {showCourseForm && (
-        <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-4">
+        <Card className="p-4">
           <h2 className="text-base font-semibold mb-3">Create New Course</h2>
           <form onSubmit={handleCourseSubmit} className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -297,11 +298,11 @@ const CoursesManagement = () => {
               </button>
             </div>
           </form>
-        </div>
+        </Card>
       )}
 
-      <div className="bg-white rounded-xl shadow-lg border border-gray-100 overflow-hidden">
-        <div className="px-4 py-3 border-b border-gray-200">
+      <Card className="overflow-hidden">
+        <div className="px-4 py-3 border-b border-slate-200">
           <h2 className="text-base font-semibold">Courses ({courses.length})</h2>
         </div>
 
@@ -369,7 +370,7 @@ const CoursesManagement = () => {
             ))}
           </div>
         )}
-      </div>
+      </Card>
     </div>
   );
 };

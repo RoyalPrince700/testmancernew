@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { adminApi } from '../../utils/adminApi';
 import { toast } from 'react-hot-toast';
 import { MdMenuBook, MdPeople, MdCloudUpload, MdBarChart } from 'react-icons/md';
+import Card from '../ui/Card';
 
 const DashboardOverview = () => {
   const { user } = useAuth();
@@ -39,7 +40,7 @@ const DashboardOverview = () => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-xl shadow-soft border border-gray-100 p-4 hover:shadow-medium transition-shadow duration-200">
+        <Card className="p-4">
           <div className="flex items-center">
             <div className="p-1.5 bg-blue-50 text-blue-600 rounded-lg">
               <MdMenuBook className="w-4 h-4" />
@@ -51,9 +52,9 @@ const DashboardOverview = () => {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-soft border border-gray-100 p-4 hover:shadow-medium transition-shadow duration-200">
+        <Card className="p-4">
           <div className="flex items-center">
             <div className="p-1.5 bg-green-50 text-green-600 rounded-lg">
               <MdPeople className="w-4 h-4" />
@@ -65,9 +66,9 @@ const DashboardOverview = () => {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-soft border border-gray-100 p-4 hover:shadow-medium transition-shadow duration-200">
+        <Card className="p-4">
           <div className="flex items-center">
             <div className="p-1.5 bg-purple-50 text-purple-600 rounded-lg">
               <MdCloudUpload className="w-4 h-4" />
@@ -79,9 +80,9 @@ const DashboardOverview = () => {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-xl shadow-soft border border-gray-100 p-4 hover:shadow-medium transition-shadow duration-200">
+        <Card className="p-4">
           <div className="flex items-center">
             <div className="p-1.5 bg-amber-50 text-amber-600 rounded-lg">
               <MdBarChart className="w-4 h-4" />
@@ -93,12 +94,12 @@ const DashboardOverview = () => {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* User Breakdown */}
       {!loading && stats.users.total > 0 && (
-        <div className="bg-white rounded-xl shadow-soft border border-gray-100 p-4">
+        <Card className="p-4">
           <h2 className="text-sm font-semibold text-gray-900 mb-3">User Breakdown</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <div className="text-center bg-blue-50 rounded-lg p-3">
@@ -118,11 +119,11 @@ const DashboardOverview = () => {
               <p className="text-xs text-gray-600 font-medium">Regular Users</p>
             </div>
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Overview Chart */}
-      <div className="bg-white rounded-xl shadow-soft border border-gray-100 p-4">
+      <Card className="p-4">
         <h2 className="text-sm font-semibold text-gray-900 mb-3">Overview</h2>
         <div style={{ width: '100%', height: 260 }}>
           <ResponsiveContainer>
@@ -143,17 +144,17 @@ const DashboardOverview = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </Card>
 
       {/* Recent Activity */}
-      <div className="bg-white rounded-xl shadow-soft border border-gray-100">
-        <div className="px-4 py-3 border-b border-gray-200">
+      <Card className="p-0">
+        <div className="px-4 py-3 border-b border-slate-200">
           <h2 className="text-sm font-semibold text-gray-900">Recent Activity</h2>
         </div>
         <div className="p-4">
           <p className="text-gray-500 text-xs">No recent activity to display.</p>
         </div>
-      </div>
+      </Card>
     </div>
   );
 };

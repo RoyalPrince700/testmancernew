@@ -19,15 +19,14 @@ const CourseCard = ({ course, onCardClick }) => {
     units = []
   } = course;
 
-  // Fun color palette - light and inviting
+  // Course card styling - neutral with subtle gradient
   const cardColors = {
-    background: 'bg-gradient-to-br from-blue-50 to-indigo-50',
-    hover: 'hover:from-blue-100 hover:to-indigo-100',
-    border: 'border-blue-200',
+    background: 'bg-gradient-to-br from-slate-50 to-white',
+    border: 'border-slate-200',
     progress: {
-      bg: 'bg-blue-100',
-      fill: 'bg-gradient-to-r from-blue-400 to-blue-600',
-      glow: 'shadow-blue-200'
+      bg: 'bg-slate-100',
+      fill: 'bg-primary-500',
+      glow: 'shadow-primary-200'
     }
   };
 
@@ -50,9 +49,9 @@ const CourseCard = ({ course, onCardClick }) => {
   return (
     <div
       className={`
-        relative p-4 rounded-xl border-2 ${cardColors.border} ${cardColors.background} ${cardColors.hover}
-        cursor-pointer transition-all duration-300 ease-in-out transform hover:scale-[1.02] hover:shadow-lg
-        ${isHovered ? 'shadow-xl' : 'shadow-md'}
+        relative p-4 rounded-lg border ${cardColors.border} ${cardColors.background}
+        cursor-pointer transition-all duration-300 ease-in-out hover:bg-slate-50 hover:shadow-medium
+        shadow-[0_1px_2px_rgba(0,0,0,0.04)]
       `}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
@@ -62,7 +61,7 @@ const CourseCard = ({ course, onCardClick }) => {
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1 min-w-0">
           <div className="mb-1">
-            <span className="inline-block bg-blue-600 text-white text-xs font-bold px-2 py-1 rounded-md mb-2">
+            <span className="inline-block bg-primary-500 text-white text-xs font-bold px-2 py-1 rounded-md mb-2">
               {courseCode?.toUpperCase()}
             </span>
           </div>
@@ -122,12 +121,9 @@ const CourseCard = ({ course, onCardClick }) => {
         </div>
 
         {/* Action Hint */}
-        <div className={`
-          flex items-center justify-center py-2 px-3 bg-white/50 rounded-lg transition-all duration-300
-          ${isHovered ? 'bg-white/70' : ''}
-        `}>
-          <MdPlayArrow className="w-4 h-4 text-blue-600 mr-2" />
-          <span className="text-sm text-blue-700 font-medium">
+        <div className="flex items-center justify-center py-2 px-3 bg-slate-50 rounded-lg">
+          <MdPlayArrow className="w-4 h-4 text-primary-600 mr-2" />
+          <span className="text-sm text-slate-700 font-medium">
             {isExpanded ? 'Click to collapse units' : 'Click to expand and view units'}
           </span>
         </div>
@@ -135,7 +131,7 @@ const CourseCard = ({ course, onCardClick }) => {
 
       {/* Expandable Unit Dropdown */}
       {isExpanded && units.length > 0 && (
-        <div className="mt-4 pt-4 border-t border-blue-200">
+        <div className="mt-4 pt-4 border-t border-slate-200">
           <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center">
             <span className="mr-2">📚</span>
             Course {unitLabel.toLowerCase()}s
@@ -204,10 +200,6 @@ const CourseCard = ({ course, onCardClick }) => {
         </div>
       )}
 
-      {/* Subtle background pattern */}
-      <div className="absolute top-0 right-0 w-20 h-20 opacity-5">
-        <div className="w-full h-full bg-gradient-to-br from-blue-400 to-indigo-600 rounded-full transform translate-x-6 -translate-y-6" />
-      </div>
     </div>
   );
 };

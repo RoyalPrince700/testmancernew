@@ -3,15 +3,26 @@ import { Link } from 'react-router-dom';
 import { MdAssessment, MdSchool, MdSchedule, MdCheckCircle } from 'react-icons/md';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import Card from '../ui/Card';
 
-const RecentAssessments = () => {
+const RecentAssessments = ({ recentAssessments = [] }) => {
   const [caAssessments, setCaAssessments] = useState([]);
   const [examAssessments, setExamAssessments] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchRecentAssessments();
-  }, []);
+    // Use provided data if available, otherwise fetch
+    if (recentAssessments && recentAssessments.length > 0) {
+      // Assume recentAssessments contains both CA and exam data
+      const ca = recentAssessments.filter(a => a.type === 'ca' || a.assessmentType === 'ca');
+      const exams = recentAssessments.filter(a => a.type === 'exam' || a.assessmentType === 'exam');
+      setCaAssessments(ca);
+      setExamAssessments(exams);
+      setLoading(false);
+    } else {
+      fetchRecentAssessments();
+    }
+  }, [recentAssessments]);
 
   const fetchRecentAssessments = async () => {
     try {
@@ -53,8 +64,8 @@ const RecentAssessments = () => {
 
   if (loading) {
     return (
-      <div className="card">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">CA / Exam</h2>
+      <Card className="p-4 sm:p-6">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">CA / Exam</h2>
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="animate-pulse">
@@ -62,13 +73,13 @@ const RecentAssessments = () => {
             </div>
           ))}
         </div>
-      </div>
+      </Card>
     );
   }
 
   return (
-    <div className="card">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-4">CA / Exam</h2>
+    <Card className="p-4 sm:p-6">
+      <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-4">CA / Exam</h2>
 
       {caAssessments.length === 0 && examAssessments.length === 0 ? (
         <div className="text-center py-6">
@@ -184,7 +195,7 @@ const RecentAssessments = () => {
           Browse All Courses
         </Link>
       </div>
-    </div>
+    </Card>
   );
 };
 

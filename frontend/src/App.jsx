@@ -15,6 +15,7 @@ const ConditionalBottomNav = () => {
 };
 import { AuthProvider } from './contexts/AuthContext';
 import { CategoryProvider } from './contexts/CategoryContext';
+import { NavigationProvider } from './contexts/NavigationContext';
 import { Toaster } from 'react-hot-toast';
 
 // Components
@@ -25,6 +26,7 @@ import AdminDashboard from './components/AdminDashboard';
 import SubAdminDashboard from './components/SubAdminDashboard';
 import AdminRoute from './components/AdminRoute';
 import SubAdminRoute from './components/SubAdminRoute';
+import AppLayout from './components/layout/AppLayout';
 
 // Pages
 import Home from './pages/Home';
@@ -68,126 +70,130 @@ function App() {
       <ScrollToTop />
       <AuthProvider>
         <CategoryProvider>
-          <div className="min-h-screen bg-gray-50">
-            <Navbar />
-            <main className="flex-1 pb-16 md:pb-0">
-              <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<Home />} />
-              <Route path="/auth" element={<Auth />} />
-              <Route path="/auth/callback" element={<AuthCallback />} />
+          <NavigationProvider>
+            <AppLayout>
+            <div className="min-h-screen bg-white">
+              <Navbar />
+              <main className="flex-1 pb-16 md:pb-0 pt-16">
+                <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<Home />} />
+                <Route path="/auth" element={<Auth />} />
+                <Route path="/auth/callback" element={<AuthCallback />} />
 
-              {/* Protected Routes */}
-              <Route path="/dashboard" element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              } />
+                {/* Protected Routes */}
+                <Route path="/dashboard" element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/onboarding" element={
-                <ProtectedRoute>
-                  <Onboarding />
-                </ProtectedRoute>
-              } />
+                <Route path="/onboarding" element={
+                  <ProtectedRoute>
+                    <Onboarding />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/courses" element={
-                <ProtectedRoute>
-                  <Courses />
-                </ProtectedRoute>
-              } />
+                <Route path="/courses" element={
+                  <ProtectedRoute>
+                    <Courses />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/courses/:courseId" element={
-                <ProtectedRoute>
-                  <CourseDetail />
-                </ProtectedRoute>
-              } />
+                <Route path="/courses/:courseId" element={
+                  <ProtectedRoute>
+                    <CourseDetail />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/quiz/:quizId" element={
-                <ProtectedRoute>
-                  <Quiz />
-                </ProtectedRoute>
-              } />
-              <Route path="/assessment/:assessmentId" element={
-                <ProtectedRoute>
-                  <Assessment />
-                </ProtectedRoute>
-              } />
+                <Route path="/quiz/:quizId" element={
+                  <ProtectedRoute>
+                    <Quiz />
+                  </ProtectedRoute>
+                } />
+                <Route path="/assessment/:assessmentId" element={
+                  <ProtectedRoute>
+                    <Assessment />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/quiz/:quizId/result" element={
-                <ProtectedRoute>
-                  <QuizResult />
-                </ProtectedRoute>
-              } />
+                <Route path="/quiz/:quizId/result" element={
+                  <ProtectedRoute>
+                    <QuizResult />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/leaderboard" element={
-                <ProtectedRoute>
-                  <Leaderboard />
-                </ProtectedRoute>
-              } />
+                <Route path="/leaderboard" element={
+                  <ProtectedRoute>
+                    <Navigate to="/dashboard?tab=leaderboard" replace />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/profile" element={
-                <ProtectedRoute>
-                  <Profile />
-                </ProtectedRoute>
-              } />
+                <Route path="/profile" element={
+                  <ProtectedRoute>
+                    <Profile />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/resources" element={
-                <ProtectedRoute>
-                  <ResourcesPage />
-                </ProtectedRoute>
-              } />
+                <Route path="/resources" element={
+                  <ProtectedRoute>
+                    <ResourcesPage />
+                  </ProtectedRoute>
+                } />
 
-              {/* Admin Routes */}
-              <Route path="/admin" element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
-              } />
+                {/* Admin Routes */}
+                <Route path="/admin" element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                } />
 
-              <Route path="/subadmin" element={
-                <SubAdminRoute>
-                  <SubAdminDashboard />
-                </SubAdminRoute>
-              } />
+                <Route path="/subadmin" element={
+                  <SubAdminRoute>
+                    <SubAdminDashboard />
+                  </SubAdminRoute>
+                } />
 
-              {/* Post-UTME Routes */}
-              <Route path="/post-utme" element={
-                <ProtectedRoute>
-                  <PostUtme />
-                </ProtectedRoute>
-              } />
+                {/* Post-UTME Routes */}
+                <Route path="/post-utme" element={
+                  <ProtectedRoute>
+                    <PostUtme />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/post-utme/english" element={
-                <ProtectedRoute>
-                  <EnglishCourse />
-                </ProtectedRoute>
-              } />
+                <Route path="/post-utme/english" element={
+                  <ProtectedRoute>
+                    <EnglishCourse />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/post-utme/mathematics" element={
-                <ProtectedRoute>
-                  <MathematicsCourse />
-                </ProtectedRoute>
-              } />
+                <Route path="/post-utme/mathematics" element={
+                  <ProtectedRoute>
+                    <MathematicsCourse />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/post-utme/current-affairs" element={
-                <ProtectedRoute>
-                  <CurrentAffairsCourse />
-                </ProtectedRoute>
-              } />
+                <Route path="/post-utme/current-affairs" element={
+                  <ProtectedRoute>
+                    <CurrentAffairsCourse />
+                  </ProtectedRoute>
+                } />
 
-              <Route path="/post-utme/leaderboard" element={
-                <ProtectedRoute>
-                  <PostUtmeLeaderboard />
-                </ProtectedRoute>
-              } />
+                <Route path="/post-utme/leaderboard" element={
+                  <ProtectedRoute>
+                    <PostUtmeLeaderboard />
+                  </ProtectedRoute>
+                } />
 
-              {/* 404 Route */}
-              <Route path="/404" element={<NotFound />} />
-              <Route path="*" element={<Navigate to="/404" replace />} />
-            </Routes>
-          </main>
-          <Footer />
-          <ConditionalBottomNav />
+                {/* 404 Route */}
+                <Route path="/404" element={<NotFound />} />
+                <Route path="*" element={<Navigate to="/404" replace />} />
+              </Routes>
+              </main>
+              <Footer />
+              <ConditionalBottomNav />
+            </div>
+          </AppLayout>
 
           {/* Toast notifications */}
           <Toaster
@@ -214,7 +220,7 @@ function App() {
               },
             }}
           />
-          </div>
+          </NavigationProvider>
         </CategoryProvider>
       </AuthProvider>
     </Router>

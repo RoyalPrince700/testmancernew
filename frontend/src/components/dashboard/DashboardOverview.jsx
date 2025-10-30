@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCategory } from '../../contexts/CategoryContext';
 import CategoryToggle from '../CategoryToggle';
 import CourseCard from './CourseCard';
+import Card from '../ui/Card';
 
 const DashboardOverview = ({ stats = {} }) => {
   const { user } = useAuth();
@@ -42,7 +43,7 @@ const DashboardOverview = ({ stats = {} }) => {
 
       {/* Stats Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-5">
-        <div className="card shadow-soft">
+        <Card className="shadow-[0_1px_2px_rgba(0,0,0,0.04)] p-3 sm:p-4">
           <div className="flex items-center">
             <div className="p-1 sm:p-1.5 rounded-full bg-blue-50 text-blue-600 flex-shrink-0">
               <MdQuiz className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -52,9 +53,9 @@ const DashboardOverview = ({ stats = {} }) => {
               <p className="text-base sm:text-xl font-semibold text-gray-900">{defaultStats.totalQuizzes}</p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="card shadow-soft">
+        <Card className="shadow-[0_1px_2px_rgba(0,0,0,0.04)] p-3 sm:p-4">
           <div className="flex items-center">
             <div className="p-1 sm:p-1.5 rounded-full bg-green-50 text-green-600 flex-shrink-0">
               <MdCheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -64,9 +65,9 @@ const DashboardOverview = ({ stats = {} }) => {
               <p className="text-base sm:text-xl font-semibold text-gray-900">{defaultStats.completedQuizzes}</p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="card shadow-soft">
+        <Card className="shadow-[0_1px_2px_rgba(0,0,0,0.04)] p-3 sm:p-4">
           <div className="flex items-center">
             <div className="p-1 sm:p-1.5 rounded-full bg-amber-50 text-amber-600 flex-shrink-0">
               <MdEmojiEvents className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -76,9 +77,9 @@ const DashboardOverview = ({ stats = {} }) => {
               <p className="text-base sm:text-xl font-semibold text-gray-900">{defaultStats.averageScore}%</p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="card shadow-soft">
+        <Card className="shadow-[0_1px_2px_rgba(0,0,0,0.04)] p-3 sm:p-4">
           <div className="flex items-center">
             <div className="p-1 sm:p-1.5 rounded-full bg-purple-50 text-purple-600 flex-shrink-0">
               <MdLeaderboard className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -88,9 +89,9 @@ const DashboardOverview = ({ stats = {} }) => {
               <p className="text-base sm:text-xl font-semibold text-gray-900">#{defaultStats.rank}</p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="card shadow-soft">
+        <Card className="shadow-[0_1px_2px_rgba(0,0,0,0.04)] p-3 sm:p-4">
           <div className="flex items-center">
             <div className="p-1 sm:p-1.5 rounded-full bg-pink-50 text-pink-600 flex-shrink-0">
               <MdDiamond className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -103,11 +104,11 @@ const DashboardOverview = ({ stats = {} }) => {
               )}
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Progress Chart */}
-      <div className="card shadow-soft">
+      <Card className="p-4 sm:p-6">
         <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3">Quiz Progress</h2>
         <div className="h-44 sm:h-60">
           <ResponsiveContainer width="100%" height="100%">
@@ -138,7 +139,7 @@ const DashboardOverview = ({ stats = {} }) => {
             <span>Pending</span>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Courses content moved to Courses tab. */}
     </div>

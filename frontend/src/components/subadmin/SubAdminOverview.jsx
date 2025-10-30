@@ -3,6 +3,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { useAuth } from '../../contexts/AuthContext';
 import axios from 'axios';
 import { MdSchool, MdAccountBalance, MdGrade, MdMenuBook, MdPeople, MdQuiz } from 'react-icons/md';
+import Card from '../ui/Card';
 
 const SubAdminOverview = () => {
   const { user, assignedUniversities, assignedFaculties, assignedLevels, assignedDepartments } = useAuth();
@@ -61,10 +62,10 @@ const SubAdminOverview = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-6">
+      <Card className="p-6">
         <div className="flex flex-col md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-xl font-semibold text-gray-900">Sub Admin Dashboard</h1>
+            <h1 className="text-lg font-semibold text-gray-900">Sub Admin Dashboard</h1>
             <p className="text-gray-600 mt-1 text-sm">
               Welcome back, {user?.name}! Manage content within your assigned scope.
             </p>
@@ -74,7 +75,7 @@ const SubAdminOverview = () => {
             <div className="font-semibold text-gray-900 text-sm">{getRoleDisplayName(user?.role)}</div>
           </div>
         </div>
-      </div>
+      </Card>
 
       {/* Role Description */}
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
@@ -95,7 +96,7 @@ const SubAdminOverview = () => {
 
       {/* Assignment Scope */}
       {(assignedUniversities.length > 0 || assignedFaculties.length > 0 || assignedDepartments.length > 0 || assignedLevels.length > 0) && (
-        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-6">
+        <Card className="p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-4">Your Assigned Scope</h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {assignedUniversities.length > 0 && (
@@ -147,12 +148,12 @@ const SubAdminOverview = () => {
               </div>
             )}
           </div>
-        </div>
+        </Card>
       )}
 
       {/* Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
+        <Card className="p-5">
           <div className="flex items-center">
             <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600">
               <MdMenuBook className="w-4 h-4" />
@@ -164,9 +165,9 @@ const SubAdminOverview = () => {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
+        <Card className="p-5">
           <div className="flex items-center">
             <div className="p-1.5 bg-green-50 rounded-lg text-green-600">
               <MdQuiz className="w-4 h-4" />
@@ -178,9 +179,9 @@ const SubAdminOverview = () => {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
+        <Card className="p-5">
           <div className="flex items-center">
             <div className="p-1.5 bg-purple-50 rounded-lg text-purple-600">
               <MdPeople className="w-4 h-4" />
@@ -192,11 +193,11 @@ const SubAdminOverview = () => {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
       {/* Content Overview */}
-      <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-5">
+      <Card className="p-5">
         <h2 className="text-base font-semibold text-gray-900 mb-3">Content Overview</h2>
         <div style={{ width: '100%', height: 260 }}>
           <ResponsiveContainer>
@@ -216,7 +217,7 @@ const SubAdminOverview = () => {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      </div>
+      </Card>
 
       
     </div>

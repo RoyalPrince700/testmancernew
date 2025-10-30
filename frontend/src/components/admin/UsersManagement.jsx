@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { adminApi } from '../../utils/adminApi';
 import { NIGERIAN_UNIVERSITIES, FACULTIES, LEVELS, DEPARTMENTS } from '../../utils/constants';
 import { toast } from 'react-hot-toast';
+import Card from '../ui/Card';
 
 const UsersManagement = () => {
   const [users, setUsers] = useState([]);
@@ -47,13 +48,13 @@ const UsersManagement = () => {
 
   return (
     <div className="space-y-5 text-[13px]">
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
+      <Card className="p-5">
         <h1 className="text-base font-semibold text-gray-900">User Management</h1>
         <p className="text-sm text-gray-600">View and manage user roles and permissions</p>
-      </div>
+      </Card>
 
-      <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-200 flex items-center justify-between">
+      <Card className="overflow-hidden">
+        <div className="px-5 py-3 border-b border-slate-200 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-gray-900">Users ({users.length})</h2>
         </div>
 
@@ -124,7 +125,7 @@ const UsersManagement = () => {
             </div>
           </div>
         )}
-      </div>
+      </Card>
 
       {/* Role Change Modal */}
       {showRoleModal && selectedUser && (

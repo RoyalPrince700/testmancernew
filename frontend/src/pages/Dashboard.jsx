@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCategory } from '../contexts/CategoryContext';
 import axios from 'axios';
@@ -22,6 +22,13 @@ const Dashboard = () => {
   const [personalizedCourses, setPersonalizedCourses] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Memoize filtered courses based on role permissions
+  const filteredCourses = useMemo(() => {
+    return isSubAdmin
+      ? personalizedCourses.filter(canAccessCourse)
+      : personalizedCourses;
+  }, [personalizedCourses, isSubAdmin, canAccessCourse]);
+
   useEffect(() => {
     fetchDashboardData();
   }, [user, selectedCategory]);
@@ -42,11 +49,7 @@ const Dashboard = () => {
       // Fetch personalized courses
       const coursesResponse = await axios.get(`/api/courses/personalized?category=${selectedCategory}`);
       if (coursesResponse.data.courses) {
-        // Filter courses based on role permissions
-        const filteredCourses = isSubAdmin
-          ? coursesResponse.data.courses.filter(canAccessCourse)
-          : coursesResponse.data.courses;
-        setPersonalizedCourses(filteredCourses);
+        setPersonalizedCourses(coursesResponse.data.courses);
       }
     } catch (error) {
       console.error('Failed to load dashboard data:', error);
@@ -56,19 +59,12 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="spinner"></div>
-      </div>
-    );
-  }
-
   return (
     <DashboardWithSidebar
       stats={stats}
       recentAssessments={recentAssessments}
-      personalizedCourses={personalizedCourses}
+      personalizedCourses={filteredCourses}
+      loading={loading}
     />
   );
 };

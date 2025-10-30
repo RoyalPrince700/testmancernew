@@ -1,18 +1,19 @@
 import { motion } from "framer-motion";
+import { motionProps } from "../utils/motionUtils";
 
 const TestMancerLoader = () => {
   const circleVariants = {
     initial: { scale: 0.8, opacity: 0.5 },
-    animate: {
+    animate: motionProps({
       scale: [0.8, 1.2, 0.8],
       opacity: [0.5, 1, 0.5],
       transition: { repeat: Infinity, duration: 1.2, ease: "easeInOut" }
-    }
+    })
   };
 
   const letterVariants = {
     initial: { y: 10, opacity: 0 },
-    animate: (i) => ({
+    animate: (i) => motionProps({
       y: 0,
       opacity: 1,
       transition: { delay: i * 0.1, type: "spring", stiffness: 120 }
@@ -64,9 +65,11 @@ const TestMancerLoader = () => {
         ))}
       </div>
       <motion.p
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.8, duration: 0.5 }}
+        {...motionProps({
+          initial: { opacity: 0, y: 10 },
+          animate: { opacity: 1, y: 0 },
+          transition: { delay: 0.8, duration: 0.5 }
+        })}
         className="text-gray-500 text-lg"
       >
        Study. Play. Win.

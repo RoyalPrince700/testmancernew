@@ -1,5 +1,6 @@
 import React from "react";
 import { motion } from "framer-motion";
+import { motionProps } from "../utils/motionUtils";
 
 function Auth() {
   const handleGoogleAuth = () => {
@@ -12,13 +13,17 @@ function Auth() {
       {/* Animated 3D Shapes */}
       <motion.div
         className="absolute top-10 left-20 w-48 h-48 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full opacity-10"
-        animate={{ translateY: [-30, 30], rotate: [0, 360] }}
-        transition={{ repeat: Infinity, repeatType: "mirror", duration: 8, ease: "easeInOut" }}
+        {...motionProps({
+          animate: { translateY: [-30, 30], rotate: [0, 360] },
+          transition: { repeat: Infinity, repeatType: "mirror", duration: 8, ease: "easeInOut" }
+        })}
       />
       <motion.div
         className="absolute bottom-10 right-10 w-60 h-60 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full opacity-10"
-        animate={{ translateX: [-20, 20], scale: [1, 1.1] }}
-        transition={{ repeat: Infinity, repeatType: "mirror", duration: 6, ease: "easeInOut" }}
+        {...motionProps({
+          animate: { translateX: [-20, 20], scale: [1, 1.1] },
+          transition: { repeat: Infinity, repeatType: "mirror", duration: 6, ease: "easeInOut" }
+        })}
       />
 
       {/* Floating particles */}
@@ -28,26 +33,32 @@ function Auth() {
             key={i}
             className="absolute w-2 h-2 bg-blue-500 rounded-full opacity-30"
             style={{ left: `${Math.random() * 100}%`, top: `${Math.random() * 100}%` }}
-            animate={{ y: [0, -100, 0], opacity: [0.3, 0.8, 0.3] }}
-            transition={{ duration: 3 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }}
+            {...motionProps({
+              animate: { y: [0, -100, 0], opacity: [0.3, 0.8, 0.3] },
+              transition: { duration: 3 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }
+            })}
           />
         ))}
       </div>
 
       {/* Main Content */}
       <motion.div
-        initial={{ opacity: 0, y: 50 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8, ease: "easeOut" }}
+        {...motionProps({
+          initial: { opacity: 0, y: 50 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.8, ease: "easeOut" }
+        })}
         className="relative z-10 w-full max-w-md mx-4"
       >
         {/* Glass morphism card */}
         <div className="bg-white/60 backdrop-blur-xl border border-white/50 rounded-2xl p-8 shadow-2xl">
           {/* Logo/Brand */}
           <motion.div
-            initial={{ scale: 0.8, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2, duration: 0.6 }}
+            {...motionProps({
+              initial: { scale: 0.8, opacity: 0 },
+              animate: { scale: 1, opacity: 1 },
+              transition: { delay: 0.2, duration: 0.6 }
+            })}
             className="text-center mb-8"
           >
             <div className="flex items-center justify-center space-x-2 mb-4">
@@ -61,9 +72,11 @@ function Auth() {
 
           {/* Google Auth Section */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4, duration: 0.6 }}
+            {...motionProps({
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+              transition: { delay: 0.4, duration: 0.6 }
+            })}
             className="space-y-6"
           >
             {/* Info Card */}
@@ -88,7 +101,7 @@ function Auth() {
             <div className="transform hover:scale-105 transition-all duration-300">
               <button
                 onClick={handleGoogleAuth}
-                className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-300 rounded-xl px-6 py-4 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 shadow-lg"
+                className="w-full flex items-center justify-center space-x-3 bg-white border border-gray-300 rounded-xl px-6 py-4 text-gray-700 hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-2 transition-all duration-200 shadow-lg"
               >
                 <svg className="w-6 h-6 text-red-500" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -102,9 +115,11 @@ function Auth() {
 
             {/* Benefits */}
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.6, duration: 0.6 }}
+              {...motionProps({
+                initial: { opacity: 0 },
+                animate: { opacity: 1 },
+                transition: { delay: 0.6, duration: 0.6 }
+              })}
               className="space-y-3"
             >
               <div className="flex items-center text-slate-700 text-sm">
@@ -130,9 +145,11 @@ function Auth() {
 
           {/* Bottom text */}
           <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1, duration: 0.6 }}
+            {...motionProps({
+              initial: { opacity: 0 },
+              animate: { opacity: 1 },
+              transition: { delay: 1, duration: 0.6 }
+            })}
             className="text-center text-slate-500 text-xs mt-6"
           >
             By continuing, you agree to our Terms of Service and Privacy Policy
