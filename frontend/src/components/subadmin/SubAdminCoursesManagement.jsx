@@ -750,22 +750,22 @@ const SubAdminCoursesManagement = () => {
                 <tbody className="bg-white divide-y divide-gray-200">
                   {filteredCourses.map((course) => (
                     <tr key={course._id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div>
+                      <td className="px-6 py-4">
+                        <div className="max-w-xs">
                           <div className="text-sm font-medium text-gray-900">{course.courseCode}</div>
-                          <div className="text-xs text-gray-500 line-clamp-2">{course.description}</div>
+                          <div className="text-xs text-gray-500 line-clamp-2 break-words">{course.description}</div>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div className="text-xs">
+                      <td className="px-6 py-4 text-sm text-gray-500">
+                        <div className="text-xs max-w-xs">
                           {course.audience?.universities?.length > 0 && (
-                            <div>{course.audience.universities.length} universities</div>
+                            <div className="truncate">{course.audience.universities.length} universities</div>
                           )}
                           {course.audience?.faculties?.length > 0 && (
-                            <div>{course.audience.faculties.length} faculties</div>
+                            <div className="truncate">{course.audience.faculties.length} faculties</div>
                           )}
                           {course.audience?.levels?.length > 0 && (
-                            <div>{course.audience.levels.length} levels</div>
+                            <div className="truncate">{course.audience.levels.length} levels</div>
                           )}
                           {!course.audience?.universities?.length &&
                            !course.audience?.faculties?.length &&
@@ -814,7 +814,7 @@ const SubAdminCoursesManagement = () => {
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 min-w-0">
                       <h3 className="text-sm font-semibold text-gray-900 truncate">{course.courseCode}</h3>
-                      <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
+                      <p className="text-xs text-gray-500 mt-1 line-clamp-2 break-words">{course.description}</p>
                     </div>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2 flex-shrink-0">
                       Active
