@@ -10,11 +10,11 @@ import ab3 from '../../assets/ab3.png';
 const FeaturesSection = () => {
   const features = [
     {
-      image: ab1,
+      image: ab2,
       title: 'Interactive Courses',
     },
     {
-      image: ab2,
+      image: ab1,
       title: 'Gamified Learning',
     },
     {
@@ -82,7 +82,7 @@ const FeaturesSection = () => {
 
         {/* Mobile horizontal swipe with peek of next card. Headline sits outside */}
         <motion.div
-          className="md:hidden px-4 overflow-x-auto snap-x snap-mandatory"
+          className="md:hidden px-4 pb-4 overflow-x-auto snap-x snap-mandatory"
           variants={containerVariants}
           initial="hidden"
           animate={isInView ? "visible" : "hidden"}

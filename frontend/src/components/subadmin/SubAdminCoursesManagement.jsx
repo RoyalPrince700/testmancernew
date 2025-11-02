@@ -6,6 +6,70 @@ import { MdAdd, MdEdit, MdDelete, MdSearch, MdFilterList, MdMenuBook, MdClose, M
 import MediaUpload from '../MediaUpload';
 import Card from '../ui/Card';
 
+// Gradient theme options for course covers
+const GRADIENT_THEMES = [
+  {
+    id: 'ocean-blue',
+    name: 'Ocean Blue',
+    gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+    icon: '🌊'
+  },
+  {
+    id: 'sunset-orange',
+    name: 'Sunset Orange',
+    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+    icon: '🌅'
+  },
+  {
+    id: 'forest-green',
+    name: 'Forest Green',
+    gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)',
+    icon: '🌲'
+  },
+  {
+    id: 'royal-purple',
+    name: 'Royal Purple',
+    gradient: 'linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)',
+    icon: '👑'
+  },
+  {
+    id: 'fire-red',
+    name: 'Fire Red',
+    gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+    icon: '🔥'
+  },
+  {
+    id: 'cosmic-purple',
+    name: 'Cosmic Purple',
+    gradient: 'linear-gradient(135deg, #8E2DE2 0%, #4A00E0 100%)',
+    icon: '🌌'
+  },
+  {
+    id: 'mint-fresh',
+    name: 'Mint Fresh',
+    gradient: 'linear-gradient(135deg, #00F260 0%, #0575E6 100%)',
+    icon: '🌿'
+  },
+  {
+    id: 'golden-sunset',
+    name: 'Golden Sunset',
+    gradient: 'linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%)',
+    icon: '✨'
+  },
+  {
+    id: 'arctic-blue',
+    name: 'Arctic Blue',
+    gradient: 'linear-gradient(135deg, #74c0fc 0%, #339af0 100%)',
+    icon: '❄️'
+  },
+  {
+    id: 'rose-pink',
+    name: 'Rose Pink',
+    gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 50%, #4facfe 100%)',
+    icon: '🌹'
+  }
+];
+
 const SubAdminCoursesManagement = () => {
   const { user, assignedUniversities, assignedFaculties, assignedDepartments, assignedLevels } = useAuth();
   const [courses, setCourses] = useState([]);
@@ -13,6 +77,8 @@ const SubAdminCoursesManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
+  const [selectedCourseForEdit, setSelectedCourseForEdit] = useState(null);
+  const [showEditForm, setShowEditForm] = useState(false);
   // Helper function to get unitLabel from unitType
   const getUnitLabel = (unitType) => {
     return unitType.charAt(0).toUpperCase() + unitType.slice(1);
@@ -22,10 +88,24 @@ const SubAdminCoursesManagement = () => {
     title: '',
     courseCode: '',
     description: '',
+    theme: 'ocean-blue', // Default theme
     units: 1, // Keep for backward compatibility
     structure: {
       unitType: 'module',
       unitLabel: getUnitLabel('module'),
+      unitCount: 1
+    }
+  });
+
+  const [editForm, setEditForm] = useState({
+    title: '',
+    courseCode: '',
+    description: '',
+    theme: 'ocean-blue', // Default theme
+    units: 1, // Keep for backward compatibility
+    structure: {
+      unitType: 'module',
+      unitLabel: 'Module',
       unitCount: 1
     }
   });
@@ -81,6 +161,7 @@ const SubAdminCoursesManagement = () => {
         title: '',
         courseCode: '',
         description: '',
+        theme: 'ocean-blue',
         units: 1,
         structure: {
           unitType: 'module',
@@ -107,6 +188,49 @@ const SubAdminCoursesManagement = () => {
     } catch (error) {
       console.error('Failed to delete course:', error);
       toast.error(error.response?.data?.message || 'Failed to delete course');
+    }
+  };
+
+  const handleEditCourse = (course) => {
+    setSelectedCourseForEdit(course);
+    setEditForm({
+      title: course.title,
+      courseCode: course.courseCode,
+      description: course.description,
+      theme: course.theme || 'ocean-blue',
+      units: course.units || 1,
+      structure: course.structure || {
+        unitType: 'module',
+        unitLabel: 'Module',
+        unitCount: 1
+      }
+    });
+    setShowEditForm(true);
+  };
+
+  const handleCourseUpdate = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await axios.put(`/api/courses/admin/courses/${selectedCourseForEdit._id}`, editForm);
+      toast.success('Course updated successfully!');
+
+      // Update the course in the local state
+      setCourses(courses.map(course =>
+        course._id === selectedCourseForEdit._id
+          ? { ...course, ...editForm }
+          : course
+      ));
+
+      setShowEditForm(false);
+      setSelectedCourseForEdit(null);
+      setEditForm({
+        title: '',
+        courseCode: '',
+        description: ''
+      });
+    } catch (error) {
+      console.error('Failed to update course:', error);
+      toast.error(error.response?.data?.message || 'Failed to update course');
     }
   };
 
@@ -256,18 +380,44 @@ const SubAdminCoursesManagement = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
-                <textarea
-                  value={courseForm.description}
-                  onChange={(e) => setCourseForm({...courseForm, description: e.target.value})}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
-                  placeholder="Enter course description"
-                  required
-                />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <textarea
+                value={courseForm.description}
+                onChange={(e) => setCourseForm({...courseForm, description: e.target.value})}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                placeholder="Enter course description"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Course Theme</label>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {GRADIENT_THEMES.map((theme) => (
+                  <div
+                    key={theme.id}
+                    onClick={() => setCourseForm({...courseForm, theme: theme.id})}
+                    className={`cursor-pointer rounded-lg p-4 border-2 transition-all duration-200 ${
+                      courseForm.theme === theme.id
+                        ? 'border-green-500 shadow-lg scale-105'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    style={{ background: theme.gradient }}
+                  >
+                    <div className="text-center">
+                      <div className="text-2xl mb-2">{theme.icon}</div>
+                      <div className="text-xs font-medium text-white drop-shadow-md">
+                        {theme.name}
+                      </div>
+                    </div>
+                  </div>
+                ))}
               </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Structure Type</label>
                 <select
@@ -356,6 +506,211 @@ const SubAdminCoursesManagement = () => {
         </div>
       )}
 
+      {/* Edit Course Form */}
+      {showEditForm && selectedCourseForEdit && (
+        <div className="bg-white rounded-lg shadow-soft border border-gray-100 p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-base font-semibold text-gray-900">Edit Course</h2>
+            <button
+              onClick={() => {
+                setShowEditForm(false);
+                setSelectedCourseForEdit(null);
+                setEditForm({
+                  title: '',
+                  courseCode: '',
+                  description: '',
+                  theme: 'ocean-blue',
+                  units: 1,
+                  structure: {
+                    unitType: 'module',
+                    unitLabel: 'Module',
+                    unitCount: 1
+                  }
+                });
+              }}
+              className="text-gray-400 hover:text-gray-600"
+            >
+              <MdClose className="w-5 h-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleCourseUpdate} className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Course Title</label>
+                <input
+                  type="text"
+                  value={editForm.title}
+                  onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  placeholder="Enter course title"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Course Code</label>
+                <input
+                  type="text"
+                  value={editForm.courseCode}
+                  onChange={(e) => setEditForm({...editForm, courseCode: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  placeholder="e.g., CSC 101"
+                  required
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+              <textarea
+                value={editForm.description}
+                onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                placeholder="Enter course description"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">Course Theme</label>
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                {GRADIENT_THEMES.map((theme) => (
+                  <div
+                    key={theme.id}
+                    onClick={() => setEditForm({...editForm, theme: theme.id})}
+                    className={`cursor-pointer rounded-lg p-4 border-2 transition-all duration-200 ${
+                      editForm.theme === theme.id
+                        ? 'border-blue-500 shadow-lg scale-105'
+                        : 'border-gray-200 hover:border-gray-300'
+                    }`}
+                    style={{ background: theme.gradient }}
+                  >
+                    <div className="text-center">
+                      <div className="text-2xl mb-2">{theme.icon}</div>
+                      <div className="text-xs font-medium text-white drop-shadow-md">
+                        {theme.name}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Structure Type</label>
+                <select
+                  value={editForm.structure.unitType}
+                  onChange={(e) => {
+                    const unitType = e.target.value;
+                    const unitLabel = getUnitLabel(unitType);
+                    setEditForm({
+                      ...editForm,
+                      structure: {
+                        ...editForm.structure,
+                        unitType,
+                        unitLabel
+                      }
+                    });
+                  }}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  required
+                >
+                  <option value="chapter">Chapter</option>
+                  <option value="module">Module</option>
+                  <option value="section">Section</option>
+                  <option value="topic">Topic</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Unit Count</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  value={editForm.structure.unitCount}
+                  onChange={(e) => setEditForm({
+                    ...editForm,
+                    structure: {
+                      ...editForm.structure,
+                      unitCount: parseInt(e.target.value) || 1
+                    }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  placeholder="1-100"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Unit Label</label>
+                <input
+                  type="text"
+                  value={editForm.structure.unitLabel}
+                  onChange={(e) => setEditForm({
+                    ...editForm,
+                    structure: {
+                      ...editForm.structure,
+                      unitLabel: e.target.value
+                    }
+                  })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  placeholder="e.g., Chapter, Module, Section"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Units (Legacy)</label>
+                <input
+                  type="number"
+                  min="1"
+                  max="5"
+                  value={editForm.units}
+                  onChange={(e) => setEditForm({...editForm, units: parseInt(e.target.value) || 1})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  placeholder="1-5"
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="submit"
+                className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm"
+              >
+                Update Course
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditForm(false);
+                  setSelectedCourseForEdit(null);
+                  setEditForm({
+                    title: '',
+                    courseCode: '',
+                    description: '',
+                    theme: 'ocean-blue',
+                    units: 1,
+                    structure: {
+                      unitType: 'module',
+                      unitLabel: 'Module',
+                      unitCount: 1
+                    }
+                  });
+                }}
+                className="bg-gray-600 text-white px-6 py-2 rounded-lg hover:bg-gray-700 transition-colors font-medium text-sm"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+
       {/* Courses List */}
       <div className="bg-white rounded-lg shadow-soft border border-gray-100">
         {loading ? (
@@ -397,7 +752,7 @@ const SubAdminCoursesManagement = () => {
                     <tr key={course._id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div>
-                          <div className="text-sm font-medium text-gray-900">{course.title}</div>
+                          <div className="text-sm font-medium text-gray-900">{course.courseCode}</div>
                           <div className="text-xs text-gray-500 line-clamp-2">{course.description}</div>
                         </div>
                       </td>
@@ -433,6 +788,13 @@ const SubAdminCoursesManagement = () => {
                           <MdMenuBook className="w-4 h-4" />
                         </button>
                         <button
+                          onClick={() => handleEditCourse(course)}
+                          className="text-blue-600 hover:text-blue-900 mr-3"
+                          title="Edit Course Details"
+                        >
+                          <MdEdit className="w-4 h-4" />
+                        </button>
+                        <button
                           onClick={() => handleDeleteCourse(course._id)}
                           className="text-red-600 hover:text-red-900"
                         >
@@ -451,7 +813,7 @@ const SubAdminCoursesManagement = () => {
                 <div key={course._id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
                   <div className="flex justify-between items-start mb-3">
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-sm font-semibold text-gray-900 truncate">{course.title}</h3>
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">{course.courseCode}</h3>
                       <p className="text-xs text-gray-500 mt-1 line-clamp-2">{course.description}</p>
                     </div>
                     <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 ml-2 flex-shrink-0">
@@ -483,6 +845,13 @@ const SubAdminCoursesManagement = () => {
                     >
                       <MdMenuBook className="w-3 h-3 mr-1" />
                       Manage
+                    </button>
+                    <button
+                      onClick={() => handleEditCourse(course)}
+                      className="flex-1 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors text-xs font-medium flex items-center justify-center"
+                    >
+                      <MdEdit className="w-3 h-3 mr-1" />
+                      Edit
                     </button>
                     <button
                       onClick={() => handleDeleteCourse(course._id)}

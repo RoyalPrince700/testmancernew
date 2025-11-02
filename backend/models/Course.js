@@ -106,6 +106,11 @@ const courseSchema = new mongoose.Schema({
     required: true,
     trim: true
   },
+  theme: {
+    type: String,
+    default: 'ocean-blue',
+    enum: ['ocean-blue', 'sunset-orange', 'forest-green', 'royal-purple', 'fire-red', 'cosmic-purple', 'mint-fresh', 'golden-sunset', 'arctic-blue', 'rose-pink']
+  },
   units: {
     type: Number,
     required: true,
